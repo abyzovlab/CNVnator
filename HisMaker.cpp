@@ -1472,36 +1472,65 @@ void HisMaker::updateMask_skip(double *rd,double *level,bool *mask,int n_bins,
   }
 }
 
-void HisMaker::calcLevels(double *level,bool *mask,int n_bins,int bin_band,
-			  double mean,double sigma,bool skipMasked)
-{
-  double *grad_b = new double[n_bins];
-  for (int b = 0;b < n_bins;b++) grad_b[b] = 0;
+void calcLevelsInner(const double* level, const bool* mask, int n_bins, int bin_band, double mean,
+                     double sigma, double* grad_b) {
+  std::vector<int> nonMaskedIndices;
+  std::vector<double> nonMaskedLevels;
+  nonMaskedIndices.reserve(n_bins);
+  nonMaskedLevels.reserve(n_bins);
 
   double inv2_bin_band = 1./(bin_band*bin_band);
   double mean_4 = mean/4, sigma_2 = 4/(sigma*sigma),ms2 = mean/(sigma*sigma);
   int    win = 3*bin_band;
-  double *exps = new double[win + 1];
-  for (int i = 0;i <= win;i++)
-    exps[i] = i*TMath::Exp(-0.5*i*i*inv2_bin_band);
-  for (int b = 0;b < n_bins;b++) {
-    if (mask[b]) continue;
-    double inv_b = 0; int d = 0;
-    if (level[b] < mean_4) inv_b = sigma_2;
-    else                   inv_b = ms2/level[b];
-    for (int i = b + 1;i < n_bins;i++) {
-      if (mask[i]) continue;
-      d++;
-      double inv_i = 0;
-      if (level[i] < mean_4) inv_i = sigma_2;
-      else                   inv_i = ms2/level[i];
-      double r = level[i] - level[b];
-      double val = -0.5*r*r;
-      grad_b[b] += exps[d]*TMath::Exp(val*inv_b);
-      grad_b[i] -= exps[d]*TMath::Exp(val*inv_i);
-      if (d == win) break;
-    }
+  double * exps = new double[2 * win + 1];
+
+  for (int b = 0; b < n_bins; b++) {
+    if (!mask[b]) {
+      nonMaskedIndices.push_back(b);
+      nonMaskedLevels.push_back(level[b]);
+    } 
   }
+
+  for (int i = -win;i <= win;i++)
+    exps[i + win] = i * exp(-0.5*i*i*inv2_bin_band);
+
+  double * window;
+  #pragma omp parallel private(window)
+  {
+    window = new double[2 * win + 1];
+
+    #pragma omp for schedule(static, 32)
+    for (int bb = 0; bb < nonMaskedIndices.size(); bb++) {
+      int b = nonMaskedIndices[bb];
+      double level_b = nonMaskedLevels[bb];
+      double inv_b = (level_b < mean_4)? sigma_2: ms2/level_b;
+      double grad_b_b = grad_b[b];
+      int left = std::max(0, bb - win);
+      int right = std::min((int)nonMaskedIndices.size() - 1, bb + win);
+      for (int ii = left; ii <= right; ii++) {
+        double r = nonMaskedLevels[ii] - level_b;
+        double val = -0.5*r*r;
+        window[ii - bb + win] = val * inv_b;
+      }
+      for (int ii = left; ii <= right; ii++) {
+        grad_b_b += exps[ii - bb + win] * exp(window[ii - bb + win]);
+      }
+      grad_b[b] = grad_b_b;
+    }
+
+    delete [] window;
+  }
+
+  delete [] exps;
+}
+
+void HisMaker::calcLevels(double *level,bool *mask,int n_bins,int bin_band,
+			  double mean,double sigma,bool skipMasked)
+{
+  double *grad_b = new double[n_bins];
+  memset(grad_b, 0, n_bins * sizeof(double));
+
+  calcLevelsInner(level, mask, n_bins, bin_band, mean, sigma, grad_b); 
 
   // Calculating levels
   for (int b = 0;b < n_bins;b++) {
@@ -1540,7 +1569,7 @@ void HisMaker::calcLevels(double *level,bool *mask,int n_bins,int bin_band,
       if (!mask[i]) level[i] = nl;
   }
 
-  delete[] exps;
+  //delete[] exps;
   delete[] grad_b;
 }
 
