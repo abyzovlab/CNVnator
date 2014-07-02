@@ -1569,7 +1569,6 @@ void HisMaker::calcLevels(double *level,bool *mask,int n_bins,int bin_band,
       if (!mask[i]) level[i] = nl;
   }
 
-  //delete[] exps;
   delete[] grad_b;
 }
 
