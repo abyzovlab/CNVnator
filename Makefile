@@ -6,7 +6,7 @@ ROOTLIBS  = -L$(ROOTSYS)/lib -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d \
 		-lGpad -lTree -lRint -lMatrix -lPhysics \
 		-lMathCore -lThread -lGui
 
-CXX    = g++ $(ROOTFLAGS) -DCNVNATOR_VERSION=\"$(VERSION)\"
+CXX    = g++ $(ROOTFLAGS) -DCNVNATOR_VERSION=\"$(VERSION)\" -fopenmp
 SAMDIR = samtools
 INC    = -I$(ROOTSYS)/include -I$(SAMDIR)
 SAMLIB = $(SAMDIR)/libbam.a
