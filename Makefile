@@ -6,7 +6,15 @@ ROOTLIBS  = -L$(ROOTSYS)/lib -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d \
 		-lGpad -lTree -lRint -lMatrix -lPhysics \
 		-lMathCore -lThread -lGui
 
-CXX    = g++ $(ROOTFLAGS) -DCNVNATOR_VERSION=\"$(VERSION)\" -fopenmp
+MESS = "Compiling with parallel (OpenMP) support."
+OMPFLAGS = -fopenmp
+ifeq ($(OMP),no)
+        OMPFLAGS = 
+        MESS = "Compiling with NO parallel support."
+endif
+
+CXX    = g++ $(ROOTFLAGS) -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
+
 SAMDIR = samtools
 INC    = -I$(ROOTSYS)/include -I$(SAMDIR)
 SAMLIB = $(SAMDIR)/libbam.a
@@ -25,7 +33,12 @@ CNVDIR	     = CNVnator_$(VERSION)
 MAINDIR	     = $(TMPDIR)/$(CNVDIR)
 SRCDIR	     = $(MAINDIR)/src
 
-all: cnvnator
+all: mess cnvnator
+
+mess:
+	@echo ""
+	@echo $(MESS)
+	@echo ""
 
 cnvnator: $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(SAMLIB) $(LIBS) $(ROOTLIBS)
