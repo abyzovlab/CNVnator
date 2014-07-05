@@ -15,7 +15,9 @@ Even if compilation is not completed but file libbam.a has been created you
 can continue.
 
 $ cd ../
-$ make
+$ make 
+
+If make doesn't work, try "make OMP=no" which will disable parallel support.
 
 2. Predicting CNV regions
 =========================
