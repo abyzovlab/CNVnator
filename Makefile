@@ -1,5 +1,4 @@
 VERSION	  = v0.3
-#ROOTSYS = /net/kodiak/volumes/river/shared/users/marghoob/synthetic_genome/bina/cnvnator/current/root
 #ROOTFLAGS = -pthread -m64
 ROOTFLAGS = -m64
 override LIBS      += -lz

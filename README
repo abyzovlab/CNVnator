@@ -19,6 +19,14 @@ $ make
 
 If make doesn't work, try "make OMP=no" which will disable parallel support.
 
+>>>Installing with Yeppp support
+Yeppp (http://www.yeppp.info/) is a library which provides high-performance implementations of math functions.
+To install with Yeppp support, download Yeppp from http://bitbucket.org/MDukhan/yeppp/downloads/yeppp-1.0.0.tar.bz2
+and extract it at a location of your choice. Set YEPPLIBS and YEPPINCLUDES directories appropriately. Typically,
+for Linux-based systems on x86-64, YEPPLIBS would be yeppp-1.0.0/binaries/linux/x86_64/ and YEPPINCLUDES would be
+yeppp-1.0.0/library/headers. To build, type make YEPPLIBS=... YEPPINCLUDES=... . To disable OpenMP also add OMP=no
+to the make command.
+
 2. Predicting CNV regions
 =========================
 
