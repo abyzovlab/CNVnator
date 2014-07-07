@@ -41,9 +41,10 @@ void normalize(TH1 *his,double max = 1,double min = -1,double norm = -1)
       n++;
     }
   }
-  if (sum > 0) 
+  if (sum > 0) {
     if (norm > 0) his->Scale(norm*n/sum);
     else          his->Scale(1./sum);
+  }
 }
 
 HisMaker::HisMaker(string rootFile,Genome *genome) :
@@ -2723,7 +2724,7 @@ void HisMaker::produceHistograms_try_correct(string *user_chroms,int n_chroms)
       continue;
 
     cout<<"Reading sequence ..."<<endl;
-    if (!readChromosome(name,seq_buf,org_len) == org_len)
+    if (readChromosome(name,seq_buf,org_len) != org_len)
       cerr<<"Read sequence is different from expectation for '"
 	  <<chrom<<"'."<<endl;
     for (int p = 0;p < org_len;p++) {
