@@ -1121,7 +1121,7 @@ int HisMaker::getChromNamesWithHis(string *names,bool useATcorr,bool useGCcorr)
 
 void HisMaker::partition(string *user_chroms,int n_chroms,
 			 bool skipMasked,bool useATcorr,bool useGCcorr,
-			 int range)
+			 bool exome,int range)
 {
   string chr_names[N_CHROM_MAX] = {""};
   if (user_chroms == NULL && n_chroms != 0) {
@@ -1169,11 +1169,17 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
     TH1 *partition =
       (TH1*)his->Clone(getPartitionName(name,bin_size,useATcorr,useGCcorr));
 
-    double *rd = new double[n_bins],*level = new double[n_bins];
-    bool *mask = new bool[n_bins];
+    double *rd    = new double[n_bins];
+    double *level = new double[n_bins];
+    double *isig  = new double[n_bins];
+    double mean_4 = mean/4, sigma_2 = 4/(sigma*sigma),ms2 = mean/(sigma*sigma);
+    bool   *mask  = new bool[n_bins];
     for (int b = 0;b < n_bins;b++) {
       mask[b] = false;
       rd[b]   = his->GetBinContent(b + 1);
+      double error = his->GetBinError(b + 1);
+      if (error > 0) isig[b] = 1/(error*error);
+      else           isig[b] = 0;
     }
     
     for (int bin_band = 2;bin_band <= range;bin_band++) {
@@ -1183,13 +1189,22 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
       for (int b = 0;b < n_bins;b++) 
 	if (!mask[b]) level[b] = rd[b];
 
-      calcLevels(level,mask,n_bins,bin_band,mean,sigma,skipMasked);
+      if (!exome)
+	for (int b = 0;b < n_bins;b++)
+	  if (!mask[b]) isig[b] = (level[b] < mean_4)? sigma_2: ms2/level[b];
+      calcLevels(level,isig,mask,n_bins,bin_band,skipMasked);
       for (int b = 0;b < n_bins;b++) hl1->SetBinContent(b + 1,level[b]);
       
-      calcLevels(level,mask,n_bins,bin_band,mean,sigma,skipMasked);
+      if (!exome)
+	for (int b = 0;b < n_bins;b++)
+	  if (!mask[b]) isig[b] = (level[b] < mean_4)? sigma_2: ms2/level[b];
+      calcLevels(level,isig,mask,n_bins,bin_band,skipMasked);
       for (int b = 0;b < n_bins;b++) hl2->SetBinContent(b + 1,level[b]);
       
-      calcLevels(level,mask,n_bins,bin_band,mean,sigma,skipMasked);
+      if (!exome)
+	for (int b = 0;b < n_bins;b++)
+	  if (!mask[b]) isig[b] = (level[b] < mean_4)? sigma_2: ms2/level[b];
+      calcLevels(level,isig,mask,n_bins,bin_band,skipMasked);
       for (int b = 0;b < n_bins;b++) hl3->SetBinContent(b + 1,level[b]);
       
       if (skipMasked) {
@@ -1226,6 +1241,7 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
     
     delete[] rd;
     delete[] level;
+    delete[] isig;
     delete[] mask;
 
     // Chromosome specific
@@ -1259,7 +1275,10 @@ bool HisMaker::correctGC(TH1 *his,TH1 *his_gc,TH2* his_rd_gc,TH1 *his_mean)
       cerr<<"Zero value of GC average."<<endl;
       cerr<<"Bin "<<b<<" with center "<<his->GetBinCenter(b)
 	  <<" is not corrected."<<endl;
-    } else his->SetBinContent(b,val*gc_corr[ind]);
+    } else {
+      his->SetBinContent(b,val*gc_corr[ind]);
+      his->SetBinError(b,0);
+    }
   }
 
   delete[] gc_corr;
@@ -1383,7 +1402,7 @@ void HisMaker::updateMask(double *rd,double *level,bool *mask,int n_bins,
   double average  = 0, variance  = 0;
   double laverage = 0, lvariance = 0;
   double raverage = 0, rvariance = 0;
-  double inv_mean = 1/mean, inv_sigma = 1/sigma;
+  double inv_mean = 1/mean;
   int start = 0, stop = -1;
   while (getRegionRight(level,n_bins,stop + 1,start,stop)) {
 
@@ -1438,7 +1457,7 @@ void HisMaker::updateMask_skip(double *rd,double *level,bool *mask,int n_bins,
 {
   for (int b = 0;b < n_bins;b++) mask[b] = false;
 
-  double inv_mean = 1/mean, inv_sigma = 1/sigma;
+  double inv_mean = 1/mean;
   int start = 0, stop = -1;
   while (getRegionRight(level,n_bins,stop + 1,start,stop)) {
 
@@ -1479,15 +1498,16 @@ void HisMaker::updateMask_skip(double *rd,double *level,bool *mask,int n_bins,
   }
 }
 
-void calcLevelsInner(const double* level, const bool* mask, int n_bins, int bin_band, double mean,
-                     double sigma, double* grad_b) {
-  std::vector<int> nonMaskedIndices;
+void calcLevelsInner(const double* level,const double *inv,const bool* mask,
+		     int n_bins,int bin_band,double* grad_b) {
+  std::vector<int>    nonMaskedIndices;
   std::vector<double> nonMaskedLevels;
+  std::vector<double> nonMaskedInvs;
   nonMaskedIndices.reserve(n_bins);
   nonMaskedLevels.reserve(n_bins);
+  nonMaskedInvs.reserve(n_bins);
 
   double inv2_bin_band = 1./(bin_band*bin_band);
-  double mean_4 = mean/4, sigma_2 = 4/(sigma*sigma),ms2 = mean/(sigma*sigma);
   int    win = 3*bin_band;
   double * exps = new double[2 * win + 1];
 
@@ -1495,6 +1515,7 @@ void calcLevelsInner(const double* level, const bool* mask, int n_bins, int bin_
     if (!mask[b]) {
       nonMaskedIndices.push_back(b);
       nonMaskedLevels.push_back(level[b]);
+      nonMaskedInvs.push_back(inv[b]);
     } 
   }
 
@@ -1511,14 +1532,13 @@ void calcLevelsInner(const double* level, const bool* mask, int n_bins, int bin_
     for (int bb = 0; bb < nonMaskedIndices.size(); bb++) {
       int b = nonMaskedIndices[bb];
       double level_b = nonMaskedLevels[bb];
-      double inv_b = (level_b < mean_4)? sigma_2: ms2/level_b;
       double grad_b_b = grad_b[b];
       int left = std::max(0, bb - win);
       int right = std::min((int)nonMaskedIndices.size() - 1, bb + win);
       for (int ii = left; ii <= right; ii++) {
         double r = nonMaskedLevels[ii] - level_b;
         double val = -0.5*r*r;
-        window[ii - bb + win] = val * inv_b;
+        window[ii - bb + win] = val * nonMaskedInvs[bb];
       }
 #ifdef USE_YEPPP
       yepMath_Exp_V64f_V64f(window + left - bb + win, window_next + left - bb + win, right - left + 1);
@@ -1539,15 +1559,15 @@ void calcLevelsInner(const double* level, const bool* mask, int n_bins, int bin_
   delete [] exps;
 }
 
-void HisMaker::calcLevels(double *level,bool *mask,int n_bins,int bin_band,
-			  double mean,double sigma,bool skipMasked)
+void HisMaker::calcLevels(double *level,double *isig,bool *mask,int n_bins,
+			  int bin_band,bool skipMasked)
 {
   double *grad_b = new double[n_bins];
-  memset(grad_b, 0, n_bins * sizeof(double));
-
-  calcLevelsInner(level, mask, n_bins, bin_band, mean, sigma, grad_b); 
+  memset(grad_b,0,n_bins*sizeof(double));
 
   // Calculating levels
+  calcLevelsInner(level,isig,mask,n_bins,bin_band,grad_b); 
+
   for (int b = 0;b < n_bins;b++) {
     if (mask[b]) continue;
     int b_start = b;
@@ -2468,6 +2488,8 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
 	  double cp = his_rd_u->GetBinContent(bin) + count_parity;
 	  his_rd_u->SetBinContent(bin,cu);
 	  his_rd_p->SetBinContent(bin,cp);
+	  his_rd_u->SetBinError(bin,0);
+	  his_rd_p->SetBinError(bin,0);
 	}
 	
 	start += bin_size;

@@ -61,17 +61,18 @@ int main(int argc,char *argv[])
   }
 #endif
 
-  static const int OPT_TREE       = 0x001;
-  static const int OPT_MERGE      = 0x002;
-  static const int OPT_HIS        = 0x004;
-  static const int OPT_HISMERGE   = 0x008;
-  static const int OPT_STAT       = 0x010;
-  static const int OPT_PARTITION  = 0x020;
-  static const int OPT_CALL       = 0x040;
-  static const int OPT_VIEW       = 0x080;
-  static const int OPT_GENOTYPE   = 0x100;
-  static const int OPT_EVAL       = 0x200;
-  static const int OPT_PE         = 0x400;
+  static const int OPT_TREE       = 0x0001;
+  static const int OPT_MERGE      = 0x0002;
+  static const int OPT_HIS        = 0x0004;
+  static const int OPT_HISMERGE   = 0x0008;
+  static const int OPT_STAT       = 0x0010;
+  static const int OPT_PARTITION  = 0x0020;
+  static const int OPT_EPARTITION = 0x0040;
+  static const int OPT_CALL       = 0x0080;
+  static const int OPT_VIEW       = 0x0100;
+  static const int OPT_GENOTYPE   = 0x0200;
+  static const int OPT_EVAL       = 0x0400;
+  static const int OPT_PE         = 0x0800;
 
   static const int OPT_SPARTITION = 0x1000;
   static const int OPT_HIS_NEW    = 0x2000;
@@ -97,12 +98,13 @@ int main(int argc,char *argv[])
       if (option == "-pe")    opts[n_opts++] = OPT_PE;
       while (index < argc && argv[index][0] != '-')
 	if (strlen(argv[index++]) > 0) data_files[n_files++] = argv[index - 1];
-    } else if (option == "-his"       || option == "-his_new"    ||
-	       option == "-hismerge"  ||
-	       option == "-stat"      || option == "-eval"       ||
-	       option == "-partition" || option == "-spartition" ||
-	       option == "-call"      || option == "-view"       ||
-	       option == "-genotype"  || option == "-aggregate") {
+    } else if (option == "-his"        || option == "-his_new"    ||
+	       option == "-hismerge"   ||
+	       option == "-stat"       || option == "-eval"       ||
+	       option == "-partition"  || option == "-spartition" ||
+	       option == "-epartition" ||
+	       option == "-call"       || option == "-view"       ||
+	       option == "-genotype"   || option == "-aggregate") {
       int bs = 0;
       if (index < argc && argv[index][0] != '-') {
 	TString tmp = argv[index++];
@@ -117,6 +119,7 @@ int main(int argc,char *argv[])
       if (option == "-hismerge")   opts[n_opts] = OPT_HISMERGE;
       if (option == "-stat")       opts[n_opts] = OPT_STAT;
       if (option == "-partition")  opts[n_opts] = OPT_PARTITION;
+      if (option == "-epartition") opts[n_opts] = OPT_EPARTITION;
       if (option == "-spartition") opts[n_opts] = OPT_SPARTITION;
       if (option == "-call")       opts[n_opts] = OPT_CALL;
       if (option == "-view")       opts[n_opts] = OPT_VIEW;
@@ -232,7 +235,11 @@ int main(int argc,char *argv[])
     }
     if (option == OPT_PARTITION) { // partition
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
-      maker.partition(chroms,n_chroms,false,useATcorr,useGCcorr,range);
+      maker.partition(chroms,n_chroms,false,useATcorr,useGCcorr,false,range);
+    }
+    if (option == OPT_EPARTITION) { // exome partition
+      HisMaker maker(out_root_file,bin,useGCcorr,genome);
+      maker.partition(chroms,n_chroms,false,useATcorr,useGCcorr,true,range);
     }
     if (option == OPT_CALL) { // call
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
@@ -266,7 +273,7 @@ int main(int argc,char *argv[])
     }
     if (option == OPT_SPARTITION) { // spartition
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
-      maker.partition(chroms,n_chroms,true,useATcorr,useGCcorr,range);
+      maker.partition(chroms,n_chroms,true,useATcorr,useGCcorr,false,range);
     }
     if (option == OPT_HIS_NEW) { // his_new
       HisMaker maker(out_root_file,bin,useGCcorr,genome);

@@ -142,7 +142,7 @@ public:
   void eval(string *files,int n_files,bool useATcorr,bool useGCcorr);
   void partition(string *user_chroms,int n_chroms,
 		 bool skipMasked,bool useATcorr,bool useGCcorr,
-		 int range = 128);
+		 bool exome = false,int range = 128);
   void callSVs(string *user_chroms,int n_chroms,bool useATcorr,bool useGCcorr,
 	       bool relax);
   void pe(string *bamss,int n_files,double over,double qual);
@@ -162,8 +162,8 @@ private:
 		   double mean,double sigma);
   void updateMask_skip(double *rd,double *level,bool *mask,int n_bins,
 		       double mean,double sigma);
-  void calcLevels(double *level,bool *mask,int n_bins,int bin_band,
-		  double mean,double sigma,bool skipMasked);
+  void calcLevels(double *level,double *isig,bool *mask,int n_bins,
+		  int bin_band,bool skipMasked);
   bool mergeLevels(double *level,int n_bins,double delta);
 
 public: // Viewing and genotyping
