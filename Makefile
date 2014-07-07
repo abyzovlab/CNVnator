@@ -1,23 +1,31 @@
 VERSION	  = v0.3
+#ROOTSYS = /net/kodiak/volumes/river/shared/users/marghoob/synthetic_genome/bina/cnvnator/current/root
 #ROOTFLAGS = -pthread -m64
 ROOTFLAGS = -m64
-LIBS      = -lz
+override LIBS      += -lz
 ROOTLIBS  = -L$(ROOTSYS)/lib -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d \
 		-lGpad -lTree -lRint -lMatrix -lPhysics \
 		-lMathCore -lThread -lGui
+SAMDIR = samtools
+SAMLIB = $(SAMDIR)/libbam.a
+INC    = -I$(ROOTSYS)/include -I$(SAMDIR)
 
-MESS = "Compiling with parallel (OpenMP) support."
-OMPFLAGS = -fopenmp
 ifeq ($(OMP),no)
-        OMPFLAGS = 
-        MESS = "Compiling with NO parallel support."
+        $(info Compiling with NO parallel support)
+else
+        OMPFLAGS = -fopenmp
+        $(info Compiling with parallel (OpenMP) support)
+endif
+
+ifneq ($(YEPPPLIBDIR),)
+        override LIBS += -L$(YEPPPLIBDIR) -lyeppp
+endif
+
+ifneq ($(YEPPPINCLUDEDIR),)
+        INC += -I$(YEPPPINCLUDEDIR) -DUSE_YEPPP
 endif
 
 CXX    = g++ $(ROOTFLAGS) -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
-
-SAMDIR = samtools
-INC    = -I$(ROOTSYS)/include -I$(SAMDIR)
-SAMLIB = $(SAMDIR)/libbam.a
 
 OBJDIR = obj
 OBJS   = $(OBJDIR)/cnvnator.o  \
@@ -33,12 +41,7 @@ CNVDIR	     = CNVnator_$(VERSION)
 MAINDIR	     = $(TMPDIR)/$(CNVDIR)
 SRCDIR	     = $(MAINDIR)/src
 
-all: mess cnvnator
-
-mess:
-	@echo ""
-	@echo $(MESS)
-	@echo ""
+all: cnvnator
 
 cnvnator: $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(SAMLIB) $(LIBS) $(ROOTLIBS)
