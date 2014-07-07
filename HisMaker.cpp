@@ -4,6 +4,12 @@
 #include "Genome.hh"
 #include "Interval.hh"
 
+#ifdef USE_YEPPP
+#include <yepCore.h>
+#include <yepMath.h>
+#include <yepLibrary.h>
+#endif
+
 //static const int N_CHROM_MAX = 20000;
 static const int N_CHROM_MAX = 100000;
 
@@ -1494,10 +1500,11 @@ void calcLevelsInner(const double* level, const bool* mask, int n_bins, int bin_
   for (int i = -win;i <= win;i++)
     exps[i + win] = i * exp(-0.5*i*i*inv2_bin_band);
 
-  double * window;
-  #pragma omp parallel private(window)
+  double * window, * window_next;
+  #pragma omp parallel private(window, window_next)
   {
-    window = new double[2 * win + 1];
+    window = new double[2 * (2 * win + 1)];
+    window_next = &window[2 * win + 1];
 
     #pragma omp for schedule(static, 32)
     for (int bb = 0; bb < nonMaskedIndices.size(); bb++) {
@@ -1512,9 +1519,16 @@ void calcLevelsInner(const double* level, const bool* mask, int n_bins, int bin_
         double val = -0.5*r*r;
         window[ii - bb + win] = val * inv_b;
       }
+#ifdef USE_YEPPP
+      yepMath_Exp_V64f_V64f(window + left - bb + win, window_next + left - bb + win, right - left + 1);
+      double dot_product = 0;
+      yepCore_DotProduct_V64fV64f_S64f(exps + left - bb + win, window_next + left - bb + win, &dot_product, right - left + 1);
+      grad_b_b += dot_product;
+#else
       for (int ii = left; ii <= right; ii++) {
         grad_b_b += exps[ii - bb + win] * exp(window[ii - bb + win]);
       }
+#endif
       grad_b[b] = grad_b_b;
     }
 

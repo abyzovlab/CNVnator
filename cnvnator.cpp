@@ -1,6 +1,12 @@
 // C/C++ includes
 #include <iostream> 
 #include <fstream> 
+
+#ifdef USE_YEPPP
+#include <yepMath.h>
+#include <yepLibrary.h>
+#endif
+
 using namespace std; 
 
 // Application includes
@@ -46,6 +52,14 @@ int main(int argc,char *argv[])
     cerr<<usage<<endl;
     return 0;
   }
+
+#ifdef USE_YEPPP
+  YepStatus yepStatus = yepLibrary_Init();
+  if (yepStatus != YepStatusOk) {
+    cerr<<"Yeppp library initialization failed with status "<<yepStatus<<"."<<endl;
+    return 1;
+  }
+#endif
 
   static const int OPT_TREE       = 0x001;
   static const int OPT_MERGE      = 0x002;
