@@ -1,7 +1,5 @@
-VERSION	  = v0.3
-#ROOTFLAGS = -pthread -m64
-ROOTFLAGS = -m64
-override LIBS      += -lz
+VERSION	       = v0.3
+override LIBS += -lz
 ROOTLIBS  = -L$(ROOTSYS)/lib -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d \
 		-lGpad -lTree -lRint -lMatrix -lPhysics \
 		-lMathCore -lThread -lGui
@@ -24,7 +22,7 @@ ifneq ($(YEPPPINCLUDEDIR),)
         INC += -I$(YEPPPINCLUDEDIR) -DUSE_YEPPP
 endif
 
-CXX    = g++ $(ROOTFLAGS) -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
+CXX    = g++ -O3 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
 
 OBJDIR = obj
 OBJS   = $(OBJDIR)/cnvnator.o  \
