@@ -717,9 +717,9 @@ void HisMaker::drawHistograms(TString chrom,int start,int end,
     hisc->SetLineColor(kBlack);
   }
   if (hisp) {
-    hisp->Draw("same");
-    hisp->SetLineColor(kRed);
-    hisp->SetLineWidth(3);
+//     hisp->Draw("same");
+//     hisp->SetLineColor(kRed);
+//     hisp->SetLineWidth(3);
   }
   if (hism) {
     hism->Draw("same");
