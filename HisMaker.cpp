@@ -717,9 +717,9 @@ void HisMaker::drawHistograms(TString chrom,int start,int end,
     hisc->SetLineColor(kBlack);
   }
   if (hisp) {
-    // hisp->Draw("same");
-    // hisp->SetLineColor(kRed);
-    // hisp->SetLineWidth(3);
+    hisp->Draw("same");
+    hisp->SetLineColor(kRed);
+    hisp->SetLineWidth(3);
   }
   if (hism) {
     hism->Draw("same");
@@ -851,10 +851,6 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
     TH1 *rd_his_global = getHistogram(getDistrName(chrAll,bin_size,
 						   useATcorr,useGCcorr));
     if (!his || !rd_his || !partition) {
-      cerr<<his<<endl;
-      cerr<<getSignalName(name,bin_size,useATcorr,useGCcorr)<<endl;
-      cerr<<rd_his<<endl;
-      cerr<<partition<<endl;
       cerr<<"Can't find all histograms for '"<<chrom<<"'."<<endl;
       return;
     }
@@ -1137,7 +1133,7 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
       cerr<<"Can't find any histograms."<<endl;
       return;
     }
-    partition(chr_names,n_chroms,skipMasked,useATcorr,useGCcorr,range);
+    partition(chr_names,n_chroms,skipMasked,useATcorr,useGCcorr,exome,range);
     return;
   }
 
