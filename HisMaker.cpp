@@ -1126,7 +1126,7 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
   string chr_names[N_CHROM_MAX] = {""};
   if (user_chroms == NULL && n_chroms != 0) {
     cerr<<"No chromosome names given."<<endl
-	<<"Aborting parititioning."<<endl;
+	<<"Aborting partitioning."<<endl;
     return;
   }
 
