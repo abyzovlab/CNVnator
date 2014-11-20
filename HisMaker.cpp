@@ -13,6 +13,7 @@
 //static const int N_CHROM_MAX = 20000;
 static const int N_CHROM_MAX = 100000;
 
+
 double my_gaus(double *x_arr,double *par)
 {
   double con   = par[0];
@@ -433,7 +434,7 @@ void HisMaker::generateView(TString chrom,int start,int end,
     pad->SetFrameLineColor(kWhite);
     pad->SetFrameBorderMode(0);
     TString title = file_name; title.ReplaceAll(".root","");
-    if (his)
+    //if (his)
       drawHistograms(chrom,start,end,win,title,pad,raw,his,hisc,hisp,hism);
     if (!his || !hisc || !hisp || !hism) {
       cout<<"For file '"<<file_name<<"'."<<endl;
@@ -705,15 +706,15 @@ void HisMaker::drawHistograms(TString chrom,int start,int end,
   main->GetYaxis()->SetTitle(title);
   main->SetLineWidth(3);
   if (raw) {
-    raw->Draw("same");
+    raw->Draw("same hist");
     raw->SetLineColor(kYellow);
   }
   if (his) {
-    his->Draw("same");
+    his->Draw("same hist");
     his->SetLineColor(kGray);
   }
   if (hisc) {
-    hisc->Draw("same");
+    hisc->Draw("same hist");
     hisc->SetLineColor(kBlack);
   }
   if (hisp) {
@@ -722,7 +723,7 @@ void HisMaker::drawHistograms(TString chrom,int start,int end,
 //     hisp->SetLineWidth(3);
   }
   if (hism) {
-    hism->Draw("same");
+    hism->Draw("same hist");
     hism->SetLineColor(kGreen);
     hism->SetLineWidth(3);
   }
@@ -882,7 +883,7 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
     if (relax) cut /= 2;
 
     while (mergeLevels(level,n_bins,cut)) ;
-    
+
   //     for (int b = 0;b < n_bins;b++)
   //       merge->SetBinContent(b + 1,level[b]);
 
@@ -1029,8 +1030,8 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
       }
       double n_reads_all = 0,n_reads_unique = 0;
       for (int i = bs;i <= be;i++) {
-	n_reads_all    += h_all->GetBinContent(i);
-	n_reads_unique += h_unique->GetBinContent(i);
+	if (h_all)    n_reads_all    += h_all->GetBinContent(i);
+	if (h_unique) n_reads_unique += h_unique->GetBinContent(i);
       }
       double q0 = -1;
       if (n_reads_all > 0) q0 = (n_reads_all - n_reads_unique)/n_reads_all;
