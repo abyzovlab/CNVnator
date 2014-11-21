@@ -13,7 +13,6 @@
 //static const int N_CHROM_MAX = 20000;
 static const int N_CHROM_MAX = 100000;
 
-
 double my_gaus(double *x_arr,double *par)
 {
   double con   = par[0];
@@ -344,8 +343,14 @@ void HisMaker::view(string *files,int n_files,bool useATcorr,bool useGCcorr)
   TTimer  *timer = new TTimer("gSystem->ProcessEvents();",50,kFALSE);
   TString input = "";
   while (input != "exit" && input != "quit") {
-    TString chrom = "",start = "",end = "",option = "";
-    if (parseInput(input,chrom,start,end,option)) {
+    TString chrom = "",start = "",end = "",option = "",tmp;
+    istringstream sin(input.Data());
+    sin>>tmp;
+    if (tmp == "execute") {
+      TString obj_class,class_fun,args;
+      sin>>obj_class>>class_fun>>args;
+      executeROOT(obj_class,class_fun,args);
+    } else if (parseInput(input,chrom,start,end,option)) {
       chrom = Genome::makeCanonical(chrom.Data());
       if (option == "genotype") {
 	for (int i = 0;i < n_files;i++) {
@@ -370,6 +375,29 @@ void HisMaker::view(string *files,int n_files,bool useATcorr,bool useGCcorr)
 
   delete timer;
   exit(0);
+}
+
+void interateOverPrimitives(TList *list)
+{
+  
+}
+
+void HisMaker::executeROOT(TString obj_class,TString class_fun,TString args)
+{
+  if (!canv_view) return;
+
+  TIter i1(canv_view->GetListOfPrimitives());
+  while (TPad *pad = (TPad*)i1.Next()) {
+    pad->cd();
+    TIter i2(pad->GetListOfPrimitives());
+    while (TObject *obj = i2.Next())
+      if (obj->ClassName() == obj_class) obj->Execute(class_fun,args);
+    if (pad->ClassName() == obj_class) pad->Execute(class_fun,args);
+    pad->Update();
+  }
+  if (canv_view->ClassName() == obj_class) canv_view->Execute(class_fun,args);
+  canv_view->cd();
+  canv_view->Update();
 }
 
 void HisMaker::generateView(TString chrom,int start,int end,

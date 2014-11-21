@@ -171,6 +171,7 @@ public: // Viewing and genotyping
   void genotype(string *files,int n_files,bool useATcorr,bool useGCcorr);
 
 private:
+  void executeROOT(TString obj_class,TString class_fun,TString args);
   void generateView(TString chrom,int start,int end,
 		    bool useATcorr,bool useGCcorr,
 		    string *files = NULL,int win = -1);
