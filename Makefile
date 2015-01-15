@@ -1,11 +1,24 @@
-VERSION	       = v0.3
+VERSION	       = v0.3.1
 override LIBS += -lz
-ROOTLIBS  = -L$(ROOTSYS)/lib -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d \
-		-lGpad -lTree -lRint -lMatrix -lPhysics \
-		-lMathCore -lThread -lGui
+
+ifneq ($(wildcard $(ROOTSYS)/lib/root),)
+        ROOTLIBS  = -L$(ROOTSYS)/lib/root -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d \
+			-lGpad -lTree -lRint -lMatrix -lPhysics \
+			-lMathCore -lThread -lGui
+else
+        ROOTLIBS  = -L$(ROOTSYS)/lib -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d \
+			-lGpad -lTree -lRint -lMatrix -lPhysics \
+			-lMathCore -lThread -lGui
+endif
+        
 SAMDIR = samtools
 SAMLIB = $(SAMDIR)/libbam.a
-INC    = -I$(ROOTSYS)/include -I$(SAMDIR)
+
+ifneq ($(wildcard $(ROOTSYS)/include/root),)
+        INC    = -I$(ROOTSYS)/include/root -I$(SAMDIR)
+else
+        INC    = -I$(ROOTSYS)/include -I$(SAMDIR)
+endif
 
 ifeq ($(OMP),no)
         $(info Compiling with NO parallel support)
