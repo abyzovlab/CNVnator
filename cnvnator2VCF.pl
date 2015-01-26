@@ -89,13 +89,13 @@ while (my $line = <FILE>) {
 	$INFO .= ";SVLEN=".int($len);
     }
     $INFO   .= ";IMPRECISE";
-    if (defined($rd)) { $INFO .= ";natorRD=".$rd; }
-    if (defined($p1)) { $INFO .= ";natorP1=".$p1; }
-    if (defined($p2)) { $INFO .= ";natorP2=".$p2; }
-    if (defined($p3)) { $INFO .= ";natorP3=".$p3; }
-    if (defined($p4)) { $INFO .= ";natorP4=".$p4; }
-    if (defined($q0)) { $INFO .= ";natorQ0=".$q0; }
-    if (defined($pe)) { $INFO .= ";natorPE=".$pe; }
+    if (defined($rd) && ($rd ne "")) { $INFO .= ";natorRD=".$rd; }
+    if (defined($p1) && ($p1 ne "")) { $INFO .= ";natorP1=".$p1; }
+    if (defined($p2) && ($p2 ne "")) { $INFO .= ";natorP2=".$p2; }
+    if (defined($p3) && ($p3 ne "")) { $INFO .= ";natorP3=".$p3; }
+    if (defined($p4) && ($p4 ne "")) { $INFO .= ";natorP4=".$p4; }
+    if (defined($q0) && ($q0 ne "")) { $INFO .= ";natorQ0=".$q0; }
+    if (defined($pe) && ($pe ne "")) { $INFO .= ";natorPE=".$pe; }
     print $INFO."\n";
 }
 close(FILE);
