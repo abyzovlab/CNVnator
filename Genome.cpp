@@ -2,6 +2,10 @@
 #include "Genome.hh"
 
 Genome Genome::genomes[NGS] = {Genome("NCBI36"),Genome("GRCh37")};
+const string Genome::CHRX         = Genome::makeCanonical("X");
+const string Genome::CHRY         = Genome::makeCanonical("Y");
+const string Genome::CHRALL       = "ALL";
+const string Genome::CHRSEX       = "SEX";
 
 Genome::Genome(string name) : n_chr_(0)
 {
@@ -11,58 +15,58 @@ Genome::Genome(string name) : n_chr_(0)
     gname_       = "NCBI36";
     other_gname_ = "hg18";
     n_chr_      = 24;
-    cnames_[0]  =  "chr1"; clens_[0]  = 247249719;
-    cnames_[1]  =  "chr2"; clens_[1]  = 242951149;
-    cnames_[2]  =  "chr3"; clens_[2]  = 199501827;
-    cnames_[3]  =  "chr4"; clens_[3]  = 191273063;
-    cnames_[4]  =  "chr5"; clens_[4]  = 180857866;
-    cnames_[5]  =  "chr6"; clens_[5]  = 170899992;
-    cnames_[6]  =  "chr7"; clens_[6]  = 158821424;
-    cnames_[7]  =  "chr8"; clens_[7]  = 146274826;
-    cnames_[8]  =  "chr9"; clens_[8]  = 140273252;
-    cnames_[9]  = "chr10"; clens_[9]  = 135374737;
-    cnames_[10] = "chr11"; clens_[10] = 134452384;
-    cnames_[11] = "chr12"; clens_[11] = 132349534;
-    cnames_[12] = "chr13"; clens_[12] = 114142980;
-    cnames_[13] = "chr14"; clens_[13] = 106368585;
-    cnames_[14] = "chr15"; clens_[14] = 100338915;
-    cnames_[15] = "chr16"; clens_[15] =  88827254;
-    cnames_[16] = "chr17"; clens_[16] =  78774742;
-    cnames_[17] = "chr18"; clens_[17] =  76117153;
-    cnames_[18] = "chr19"; clens_[18] =  63811651;
-    cnames_[19] = "chr20"; clens_[19] =  62435964;
-    cnames_[20] = "chr21"; clens_[20] =  46944323;
-    cnames_[21] = "chr22"; clens_[21] =  49691432;
-    cnames_[22] =  "chrX"; clens_[22] = 154913754;
-    cnames_[23] =  "chrY"; clens_[23] =  57772954;
+    cnames_[0]  =  Genome::makeCanonical("1"); clens_[0]  = 247249719;
+    cnames_[1]  =  Genome::makeCanonical("2"); clens_[1]  = 242951149;
+    cnames_[2]  =  Genome::makeCanonical("3"); clens_[2]  = 199501827;
+    cnames_[3]  =  Genome::makeCanonical("4"); clens_[3]  = 191273063;
+    cnames_[4]  =  Genome::makeCanonical("5"); clens_[4]  = 180857866;
+    cnames_[5]  =  Genome::makeCanonical("6"); clens_[5]  = 170899992;
+    cnames_[6]  =  Genome::makeCanonical("7"); clens_[6]  = 158821424;
+    cnames_[7]  =  Genome::makeCanonical("8"); clens_[7]  = 146274826;
+    cnames_[8]  =  Genome::makeCanonical("9"); clens_[8]  = 140273252;
+    cnames_[9]  = Genome::makeCanonical("10"); clens_[9]  = 135374737;
+    cnames_[10] = Genome::makeCanonical("11"); clens_[10] = 134452384;
+    cnames_[11] = Genome::makeCanonical("12"); clens_[11] = 132349534;
+    cnames_[12] = Genome::makeCanonical("13"); clens_[12] = 114142980;
+    cnames_[13] = Genome::makeCanonical("14"); clens_[13] = 106368585;
+    cnames_[14] = Genome::makeCanonical("15"); clens_[14] = 100338915;
+    cnames_[15] = Genome::makeCanonical("16"); clens_[15] =  88827254;
+    cnames_[16] = Genome::makeCanonical("17"); clens_[16] =  78774742;
+    cnames_[17] = Genome::makeCanonical("18"); clens_[17] =  76117153;
+    cnames_[18] = Genome::makeCanonical("19"); clens_[18] =  63811651;
+    cnames_[19] = Genome::makeCanonical("20"); clens_[19] =  62435964;
+    cnames_[20] = Genome::makeCanonical("21"); clens_[20] =  46944323;
+    cnames_[21] = Genome::makeCanonical("22"); clens_[21] =  49691432;
+    cnames_[22] =  Genome::makeCanonical("X"); clens_[22] = 154913754;
+    cnames_[23] =  Genome::makeCanonical("Y"); clens_[23] =  57772954;
   } else if (name == "hg19" || name == "grch37") {
     gname_       = "GRCh37";
     other_gname_ = "hg19";
     n_chr_      = 24;
-    cnames_[0]  =  "chr1"; clens_[0]  = 249250621;
-    cnames_[1]  =  "chr2"; clens_[1]  = 243199373;
-    cnames_[2]  =  "chr3"; clens_[2]  = 198022430;
-    cnames_[3]  =  "chr4"; clens_[3]  = 191154276;
-    cnames_[4]  =  "chr5"; clens_[4]  = 180915260;
-    cnames_[5]  =  "chr6"; clens_[5]  = 171115067;
-    cnames_[6]  =  "chr7"; clens_[6]  = 159138663;
-    cnames_[7]  =  "chr8"; clens_[7]  = 146364022;
-    cnames_[8]  =  "chr9"; clens_[8]  = 141213431;
-    cnames_[9]  = "chr10"; clens_[9]  = 135534747;
-    cnames_[10] = "chr11"; clens_[10] = 135006516;
-    cnames_[11] = "chr12"; clens_[11] = 133851895;
-    cnames_[12] = "chr13"; clens_[12] = 115169878;
-    cnames_[13] = "chr14"; clens_[13] = 107349540;
-    cnames_[14] = "chr15"; clens_[14] = 102531392;
-    cnames_[15] = "chr16"; clens_[15] =  90354753;
-    cnames_[16] = "chr17"; clens_[16] =  81195210;
-    cnames_[17] = "chr18"; clens_[17] =  78077248;
-    cnames_[18] = "chr19"; clens_[18] =  59128983;
-    cnames_[19] = "chr20"; clens_[19] =  63025520;
-    cnames_[20] = "chr21"; clens_[20] =  48129895;
-    cnames_[21] = "chr22"; clens_[21] =  51304566;
-    cnames_[22] =  "chrX"; clens_[22] = 155270560;
-    cnames_[23] =  "chrY"; clens_[23] =  59373566;
+    cnames_[0]  =  Genome::makeCanonical("1"); clens_[0]  = 249250621;
+    cnames_[1]  =  Genome::makeCanonical("2"); clens_[1]  = 243199373;
+    cnames_[2]  =  Genome::makeCanonical("3"); clens_[2]  = 198022430;
+    cnames_[3]  =  Genome::makeCanonical("4"); clens_[3]  = 191154276;
+    cnames_[4]  =  Genome::makeCanonical("5"); clens_[4]  = 180915260;
+    cnames_[5]  =  Genome::makeCanonical("6"); clens_[5]  = 171115067;
+    cnames_[6]  =  Genome::makeCanonical("7"); clens_[6]  = 159138663;
+    cnames_[7]  =  Genome::makeCanonical("8"); clens_[7]  = 146364022;
+    cnames_[8]  =  Genome::makeCanonical("9"); clens_[8]  = 141213431;
+    cnames_[9]  = Genome::makeCanonical("10"); clens_[9]  = 135534747;
+    cnames_[10] = Genome::makeCanonical("11"); clens_[10] = 135006516;
+    cnames_[11] = Genome::makeCanonical("12"); clens_[11] = 133851895;
+    cnames_[12] = Genome::makeCanonical("13"); clens_[12] = 115169878;
+    cnames_[13] = Genome::makeCanonical("14"); clens_[13] = 107349540;
+    cnames_[14] = Genome::makeCanonical("15"); clens_[14] = 102531392;
+    cnames_[15] = Genome::makeCanonical("16"); clens_[15] =  90354753;
+    cnames_[16] = Genome::makeCanonical("17"); clens_[16] =  81195210;
+    cnames_[17] = Genome::makeCanonical("18"); clens_[17] =  78077248;
+    cnames_[18] = Genome::makeCanonical("19"); clens_[18] =  59128983;
+    cnames_[19] = Genome::makeCanonical("20"); clens_[19] =  63025520;
+    cnames_[20] = Genome::makeCanonical("21"); clens_[20] =  48129895;
+    cnames_[21] = Genome::makeCanonical("22"); clens_[21] =  51304566;
+    cnames_[22] =  Genome::makeCanonical("X"); clens_[22] = 155270560;
+    cnames_[23] =  Genome::makeCanonical("Y"); clens_[23] =  59373566;
   } else {
     cerr<<"Unknown genome '"<<org_name<<"'."<<endl;
   }
@@ -95,15 +99,18 @@ string Genome::makeCanonical(string name)
 {
   string tmp = "";
   for (int i = 0;i < name.length();i++) tmp += toupper(name[i]);
-  string ret = "chr";
-  if (tmp.substr(0,3)  == "CHR")             ret += name.substr(3);
-  else if (tmp.substr(0,5)  == "CHROM")      ret += name.substr(5);
-  else if (tmp.substr(0,10) == "CHROMOSOME") ret += name.substr(10);
-  else if (name.length() < 3)                ret += name;
-  else                                       ret  = name;
-  if (ret == "chrx") ret = "chrX";
-  if (ret == "chry") ret = "chrY";
+  string ret = tmp;
+  if      (tmp.substr(0,10) == "CHROMOSOME") ret = tmp.substr(10);
+  else if (tmp.substr(0,5)  == "CHROM")      ret = tmp.substr(5);
+  else if (tmp.substr(0,3)  == "CHR")        ret = tmp.substr(3);
 
   return ret;
+}
+
+bool Genome::isSexChrom(string name)
+{
+  string tmp = makeCanonical(name);
+  if (name == CHRSEX || name == CHRX || name == CHRY) return true;
+  return false;
 }
 

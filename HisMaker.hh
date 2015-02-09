@@ -34,10 +34,6 @@ using namespace std;
 #include "Genome.hh"
 
 // Constants
-const static TString chrAll = "all";
-const static TString chrX   = Genome::makeCanonical("X");
-const static TString chrY   = Genome::makeCanonical("Y");
-
 const static double PRECISION           = 0.01;
 const static double GENOME_SIZE         = 2.9e+9; // Excluding gaps
 const static double GENOME_CNV_FRACTION = 0.01;
@@ -100,8 +96,9 @@ private:
 	      TH1 *his4,TH1 *his5,TH1 *his6);
 
 public:
-  TH1* getHistogram(TString name);
-  TH1* getHistogram(TString name,TString rfile,TString dir);
+  TH1* getHistogram(TString name,TString alt_name = "");
+  TH1* getHistogram(TString root_file,TString dir,
+		    TString name,TString alt_name = "");
 
   // Histogram naming
 private:
@@ -114,7 +111,7 @@ private:
 public:
   void    setDataDir(string dir) { dir_ = dir; }
   TString getDirName(int bin);
-  TString getDistrName(TString chr,int bin,bool useATcoor,bool useGCcorr);
+  TString getDistrName(string chr,int bin,bool useATcoor,bool useGCcorr);
   TString getRawSignalName(TString chr,int bin);
   TString getSignalName(TString chr,int bin,bool useATcoor,bool useGCcorr);
   TString getPartitionName(TString chr,int bin,bool useATcorr,bool useGCcorr);
@@ -183,6 +180,7 @@ private:
 
   // Auxilary calculations
 private:
+  bool   isSexChrom(string chr);
   double getInverse(int n);
   double getSqrt(int n);
   TF1 *getTFunction(int n);

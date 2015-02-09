@@ -12,7 +12,7 @@ Genotyper::Genotyper(HisMaker *maker,
 						     
 {}
 
-void Genotyper::printGenotype(TString chr,int start,int end,
+void Genotyper::printGenotype(string chr,int start,int end,
 			      bool useATcorr,bool useGCcorr)
 {
   if (!_maker) return;
@@ -23,49 +23,58 @@ void Genotyper::printGenotype(TString chr,int start,int end,
     return;
   }
 
-  TString nameSignal       = _maker->getSignalName(chr,  _bin,
+  string canon              = Genome::makeCanonical(chr);
+  TString nameSignal        = _maker->getSignalName(chr,  _bin,
+						    useATcorr,useGCcorr);
+  TString alt_nameSignal    = _maker->getSignalName(canon,_bin,
+						    useATcorr,useGCcorr);
+  TString nameDistr         = _maker->getDistrName(chr,   _bin,
 						   useATcorr,useGCcorr);
-  TString nameDistr        = _maker->getDistrName(chr,   _bin,
-						  useATcorr,useGCcorr);
-  TString nameDistrAll     = _maker->getDistrName(chrAll,_bin,
-						  useATcorr,useGCcorr);
-  TString nameDistr1000    = _maker->getDistrName(chr,   1000,
-						  useATcorr,useGCcorr);
-  TString nameDistr1000All = _maker->getDistrName(chrAll,1000,
-						  useATcorr,useGCcorr);
+  TString alt_nameDistr     = _maker->getDistrName(canon, _bin,
+						   useATcorr,useGCcorr);
+  TString nameDistrAll      = _maker->getDistrName(Genome::CHRALL,_bin,
+						   useATcorr,useGCcorr);
+  TString nameDistr1000     = _maker->getDistrName(chr,   1000,
+						   useATcorr,useGCcorr);
+  TString alt_nameDistr1000 = _maker->getDistrName(canon, 1000,
+						   useATcorr,useGCcorr);
+  TString nameDistr1000All  = _maker->getDistrName(Genome::CHRALL,1000,
+						   useATcorr,useGCcorr);
   
   TString dirName     = _maker->getDirName(_bin);
   TString dirName1000 = _maker->getDirName(1000);
 
   if (!_hisSignal || nameSignal != _hisSignal->GetName())
-    _hisSignal = _maker->getHistogram(nameSignal,_file,dirName);
+    _hisSignal = _maker->getHistogram(_file,dirName,nameSignal,alt_nameSignal);
   
   if (!_hisDistr || nameDistr != _hisDistr->GetName()) {
-    _hisDistr  = _maker->getHistogram(nameDistr,_file,dirName);
+    _hisDistr  = _maker->getHistogram(_file,dirName,nameDistr,alt_nameDistr);
     if (_hisDistr)
       _maker->getMeanSigma(_hisDistr,_mean,_sigma);
   }
   
   if (!_hisDistrAll || nameDistrAll != _hisDistrAll->GetName()) {
-    _hisDistrAll = _maker->getHistogram(nameDistrAll,_file,dirName);
+    _hisDistrAll = _maker->getHistogram(_file,dirName,nameDistrAll);
     if (_hisDistrAll)
       _maker->getMeanSigma(_hisDistrAll,_meanAll,_sigmaAll);
   }
 
   if (!_hisDistr1000 || nameDistr1000 != _hisDistr1000->GetName()) {
-    _hisDistr1000 = _maker->getHistogram(nameDistr1000,_file,dirName1000);
+    _hisDistr1000 = _maker->getHistogram(_file,dirName1000,
+					 nameDistr1000,alt_nameDistr1000);
     if (_hisDistr1000)
       _maker->getMeanSigma(_hisDistr1000,_mean1000,_sigma1000);
   }
   
   if (!_hisDistr1000All || nameDistr1000All != _hisDistr1000All->GetName()) {
-    _hisDistr1000All = _maker->getHistogram(nameDistr1000All,_file,dirName1000);
+    _hisDistr1000All = _maker->getHistogram(_file,dirName1000,
+					    nameDistr1000All);
     if (_hisDistr1000All)
       _maker->getMeanSigma(_hisDistr1000All,_mean1000All,_sigma1000All);
   }
 
   double scale = 2;
-  if (chr == chrX || chr == chrY)
+  if (Genome::isSexChrom(chr))
     if (_meanAll > 0 && _mean/_meanAll < 0.66) {
       cout<<"Assuming male individual!"<<endl;
       scale = 1;

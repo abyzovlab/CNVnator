@@ -44,9 +44,9 @@ out.root  -- output ROOT file. See ROOT package documentation.
 chr_name1 -- chromosome name.
 file.bam  -- bam files.
 
-Chromosome names can be specified by name, e.g., X, or together with
-prefix chr, e.g., chrX. One can specify multiple chromosomes separated by
-space. If no chromosome specified, read mapping is extracted for all
+Chromosome names must be specified the same way as they are described in sam/bam
+header, e.g., chrX or X. One can specify multiple chromosomes separated by
+space. If no chromosome specified, read mapping is extracted for all chromosomes
 in sam/bam file. Note, that this would require machines with large physical
 memory of 7Gb. Extracting read mapping for subsets of chromosomes is a way
 around this issue. Note, root file is not being overwritten.
@@ -55,11 +55,24 @@ option -unique when extracting read mapping from bam/sam files.
 
 Example:
 
-./cnvnator -root NA12878.root -chrom chr1 chr2 chr3  -tree NA12878_ali.bam
+./cnvnator -root NA12878.root -chrom 1 2 3  -tree NA12878_ali.bam
 
-is equivalent to
+for bam files with the header like
+@HD VN:1.4    GO:none  SO:coordinate
+@SQ SN:1      LN:249250621
+@SQ SN:2      LN:243199373
+@SQ SN:3      LN:198022430
+...
 
-./cnvnator -root NA12878.root -chrom 1 2 3           -tree NA12878_ali.bam
+or
+
+./cnvnator -root NA12878.root -chrom chr1 chr2 chr3 -tree NA12878_ali.bam
+for bam files with the header like
+@HD VN:1.4    GO:none  SO:coordinate
+@SQ SN:chr1   LN:249250621
+@SQ SN:chr2   LN:243199373
+@SQ SN:chr3   LN:198022430
+...
 
 Example:
 
@@ -136,18 +149,30 @@ CNV calling should be completed/redone after merging.
 ./cnvnator -root file.root [-chrom chr_name1 ...] -view bin_size [-ngc]
 
 Once prompted enter a genomic region, e.g. 
+>12:11396601-11436500
+ or
 >chr12:11396601-11436500
  or 
+>12 11396601 11436500
+ or
 >chr12 11396601 11436500
 
 Additionally one can specify length of flanking regions (default is 10 kb) to
 be also displayed, e.g.
+>12:11396601-11436500 100000
+ or
 >chr12:11396601-11436500 100000
+ or
+>12 11396601 11436500 100000
  or
 >chr12 11396601 11436500 100000
 
 One can also perform instant genotyping by adding word 'genotype', e.g.
+>12:11396601-11436500 genotype
+ or
 >chr12:11396601-11436500 genotype
+ or
+>12 11396601 11436500 genotype
  or
 >chr12 11396601 11436500 genotype
 
@@ -157,26 +182,37 @@ One can also perform instant genotyping by adding word 'genotype', e.g.
 =============================
 ./cnvnator -root file.root -genotype bin_size [-ngc]
 Once prompted enter a genomic region, e.g. 
+>12:11396601-11436500
+ or
 >chr12:11396601-11436500
  or 
+>12 11396601 11436500
+ or
 >chr12 11396601 11436500
 
 One can also perform instant visualization by adding word 'view', e.g.
+>12:11396601-11436500 view
+ or
 >chr12:11396601-11436500 view
+ or
+>12 11396601 11436500 view
  or
 >chr12 11396601 11436500 view
 
-For genotyping of large number of regions one can use input piping, e.g.
+For genotyping of multiple regions one can use input piping, e.g.
 ./cnvnator -root NA12878.root -genotype 100 << EOF
-chr12:11396601-11436500
-chr22:20999401-21300400
+12:11396601-11436500
+22:20999401-21300400
 exit
 EOF
 
+Another example
+
+awk '{ print $2 } END { print "exit" }' cals.cnvnator | ./cnvnator -root NA12878.root -genotype 100
+
+
 For efficient calculation I recommend you sort your list of regions by
 chromosome.
-
-
 
 
 

@@ -10,7 +10,7 @@ else
 			-lGpad -lTree -lRint -lMatrix -lPhysics \
 			-lMathCore -lThread -lGui
 endif
-        
+
 SAMDIR = samtools
 SAMLIB = $(SAMDIR)/libbam.a
 

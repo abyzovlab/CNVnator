@@ -19,7 +19,7 @@ private:
 
 public:
   Genotyper(HisMaker *maker,TString file,int bin);
-  void printGenotype(TString chrom,int start,int end,
+  void printGenotype(string chrom,int start,int end,
 		     bool useATcorr,bool useGCcorr);
 
 private:

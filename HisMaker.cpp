@@ -10,8 +10,8 @@
 #include <yepLibrary.h>
 #endif
 
-//static const int N_CHROM_MAX = 20000;
-static const int N_CHROM_MAX = 100000;
+static const int N_CHROM_MAX = 20000;
+//static const int N_CHROM_MAX = 100000;
 
 double my_gaus(double *x_arr,double *par)
 {
@@ -135,16 +135,17 @@ HisMaker::~HisMaker()
   delete[] tfuncs;
 }
 
-TH1* HisMaker::getHistogram(TString name)
+TH1* HisMaker::getHistogram(TString name,TString alt_name)
 {
-  return getHistogram(name,root_file_name,dir_name);
+  return getHistogram(root_file_name,dir_name,name,alt_name);
 }
 
-TH1* HisMaker::getHistogram(TString name,TString rfile,TString dir)
+TH1* HisMaker::getHistogram(TString root_file,TString dir,
+			    TString name,TString alt_name)
 {
-  TFile file(rfile);
+  TFile file(root_file);
   if (file.IsZombie()) {
-    cerr<<"Can't open file '"<<rfile<<"'."<<endl;
+    cerr<<"Can't open file '"<<root_file<<"'."<<endl;
     return NULL;
   }
   TDirectory *d = NULL;
@@ -157,10 +158,13 @@ TH1* HisMaker::getHistogram(TString name,TString rfile,TString dir)
     d->cd();
   } else d = &file;
   TH1 *his = (TH1*)d->Get(name);
-  if (!his) return NULL;
-  
+  if (!his) {
+    his = (TH1*)d->Get(alt_name);
+    if (!his) return NULL;
+  }
+
   gROOT->cd();
-  TH1 *ret = (TH1*)his->Clone(name);
+  TH1 *ret = (TH1*)his->Clone(his->GetName());
   
   file.Close();
   
@@ -351,11 +355,11 @@ void HisMaker::view(string *files,int n_files,bool useATcorr,bool useGCcorr)
       sin>>obj_class>>class_fun>>args;
       executeROOT(obj_class,class_fun,args);
     } else if (parseInput(input,chrom,start,end,option)) {
-      chrom = Genome::makeCanonical(chrom.Data());
       if (option == "genotype") {
 	for (int i = 0;i < n_files;i++) {
 	  Genotyper gen(this,files[i],bin_size);
-	  gen.printGenotype(chrom,start.Atoi(),end.Atoi(),useATcorr,useGCcorr);
+	  gen.printGenotype(chrom.Data(),
+			    start.Atoi(),end.Atoi(),useATcorr,useGCcorr);
 	}
       } else {
 	int s = start.Atoi(), e = end.Atoi();
@@ -441,21 +445,28 @@ void HisMaker::generateView(TString chrom,int start,int end,
   title += end;
   canv_view->SetTitle(title);
   
+  TString canon          = Genome::makeCanonical(chrom.Data());
   TString name           = getRawSignalName(chrom,bin_size);
+  TString alt_name       = getRawSignalName(canon,bin_size);
   TString name_his       = getSignalName(chrom,bin_size,false,false);
+  TString alt_name_his   = getSignalName(canon,bin_size,false,false);
   TString name_corr      = getSignalName(chrom,bin_size,useATcorr,useGCcorr);
+  TString alt_name_corr  = getSignalName(canon,bin_size,useATcorr,useGCcorr);
   TString name_partition = getPartitionName(chrom,bin_size,
 					    useATcorr,useGCcorr);
+  TString alt_name_part  = getPartitionName(canon,bin_size,
+					    useATcorr,useGCcorr);
   TString name_merge     = name_partition + "_merge";
+  TString alt_name_merge = alt_name_part  + "_merge";
   for (int i = 0;i < n_files;i++) {
     TString file_name = root_file_name;
     if (files) file_name = files[i];
     TString dir = getDirName(bin_size);
-    TH1 *raw    = getHistogram(name,file_name,dir);
-    TH1 *his    = getHistogram(name_his,file_name,dir);
-    TH1 *hisc   = getHistogram(name_corr,file_name,dir);
-    TH1 *hisp   = getHistogram(name_partition,file_name,dir);
-    TH1 *hism   = getHistogram(name_merge,file_name,dir);
+    TH1 *raw    = getHistogram(file_name,dir,name,          alt_name);
+    TH1 *his    = getHistogram(file_name,dir,name_his,      alt_name_his);
+    TH1 *hisc   = getHistogram(file_name,dir,name_corr,     alt_name_corr);
+    TH1 *hisp   = getHistogram(file_name,dir,name_partition,alt_name_part);
+    TH1 *hism   = getHistogram(file_name,dir,name_merge,    alt_name_merge);
     TVirtualPad *pad = canv_view->cd(i + 1);
     pad->SetFillColor(kWhite);
     pad->SetLineColor(kWhite);
@@ -492,12 +503,12 @@ void HisMaker::genotype(string *files,int n_files,
   while (input != "exit" && input != "quit") {
     TString chrom = "",start = "",end = "",option = "";
     if (parseInput(input,chrom,start,end,option)) {
-      chrom = Genome::makeCanonical(chrom.Data());
       if (option == "view") {
 	generateView(chrom,start.Atoi(),end.Atoi(),useATcorr,useGCcorr);
       } else {
 	for (int i = 0;i < n_files;i++)
-	  gs[i]->printGenotype(chrom,start.Atoi(),end.Atoi(),
+	  gs[i]->printGenotype(chrom.Data(),
+			       start.Atoi(),end.Atoi(),
 			       useATcorr,useGCcorr);
       }
     }
@@ -868,7 +879,7 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
 
   for (int c = 0;c < n_chroms;c++) {
     string chrom   = user_chroms[c];
-    string name    = Genome::makeCanonical(chrom);
+    string name    = chrom;
     TH1 *h_unique  = getHistogram(getUSignalName(name,bin_size));
     TH1 *h_all     = getHistogram(getSignalName(name,bin_size,false,false));
     TH1 *his       = getHistogram(getSignalName(name,bin_size,
@@ -877,7 +888,7 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
 						   useATcorr,useGCcorr));
     TH1 *rd_his    = getHistogram(getDistrName(name,bin_size,
 					       useATcorr,useGCcorr));
-    TH1 *rd_his_global = getHistogram(getDistrName(chrAll,bin_size,
+    TH1 *rd_his_global = getHistogram(getDistrName(Genome::CHRALL,bin_size,
 						   useATcorr,useGCcorr));
     if (!his || !rd_his || !partition) {
       cerr<<"Can't find all histograms for '"<<chrom<<"'."<<endl;
@@ -1076,9 +1087,11 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
 void HisMaker::getMeanSigma(TH1 *his,double &mean,double &sigma)
 {
 
-  TF1 *fg = new TF1("my_gaus",my_gaus,0,5000,3);
   mean  = his->GetMean();
   sigma = his->GetRMS();
+  if (his->GetEntries() == 0) return;
+
+  TF1 *fg = new TF1("my_gaus",my_gaus,0,5000,3);
   double constant = his->GetEntries()*0.4/sigma;
   fg->SetParameters(constant,mean,0.5*sigma);
   fg->SetParLimits(1,0,3*mean);
@@ -1168,9 +1181,9 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
 
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
-    string name = Genome::makeCanonical(chrom);
-    TH1 *his    = getHistogram(getSignalName(name,bin_size,
-					     useATcorr,useGCcorr));
+    string name  = chrom;
+    TH1 *his     = getHistogram(getSignalName(name,bin_size,
+					      useATcorr,useGCcorr));
     TH1 *rd_his = getHistogram(getDistrName(name,bin_size,
 					    useATcorr,useGCcorr));
     if (!his || !rd_his) {
@@ -1339,7 +1352,7 @@ bool HisMaker::correctGCbyFragment(TH1 *his,TH1 *his_gc,
     return false;
   }
 
-  TH2* his_read_frg = (TH2*)getHistogram("read_frg_len",root_file_name,"");
+  TH2* his_read_frg = (TH2*)getHistogram(root_file_name,"","read_frg_len");
   if (!his_read_frg) {
     cerr<<"Can't find histogram with distribution of "
 	<<"read and fragment lengths."<<endl;
@@ -1877,7 +1890,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
   }
 
   if (useATcorr) {
-    TH2* his_read_frg = (TH2*)getHistogram("read_frg_len",root_file_name,"");
+    TH2* his_read_frg = (TH2*)getHistogram(root_file_name,"","read_frg_len");
     TH1 *his_read = NULL,*his_frg = NULL;
     if (!his_read_frg) {
       cerr<<"Can't find histogram with distribution of "
@@ -1932,7 +1945,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
       double RANGE_over = 1./RANGE;
       for (int c = 0;c < n_chroms;c++) { // Correcting for AT run bias
 	string chrom   = user_chroms[c];
-	string name    = Genome::makeCanonical(chrom);
+	string name    = chrom;
 	string name_at = name; name_at += "_at";
 	cout<<"Correcting AT run bias for "<<chrom<<" ..."<<endl;
 	TH1 *his_p = getHistogram(getSignalName(name,bin_size,false,false));
@@ -2014,15 +2027,15 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
   }
 
   // Statistics for uncorrected
-  TH1* rd_p    = new TH1D(getDistrName(chrAll,bin_size,false,false),
+  TH1* rd_p    = new TH1D(getDistrName(Genome::CHRALL,bin_size,false,false),
 			  "RD all",   5001,-0.5,5000.5);
-  TH1* rd_p_xy = new TH1D(getDistrName("chrX",bin_size,false,false),
+  TH1* rd_p_xy = new TH1D(getDistrName(Genome::CHRSEX,bin_size,false,false),
 			  "RD all XY",5001,-0.5,5000.5);
   TH1 *rd_u       = new TH1D(rd_u_name,   "RD unique",   5001,-0.5,5000.5);
   TH1 *rd_u_xy    = new TH1D(rd_u_xy_name,"RD unique XY",5001,-0.5,5000.5);
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
-    string name  = Genome::makeCanonical(chrom);
+    string name  = chrom;
     cout<<"Making statistics for "<<chrom<<" ..."<<endl;
 
     TH1 *his_p  = getHistogram(getSignalName(name,bin_size,false,false));
@@ -2039,7 +2052,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
       int position = 1;
       for (int i = 1;i <= n;i++) { // All RD
 	double val = his_p->GetBinContent(i);
-	if (name == chrX || name == chrY) rd_p_xy->Fill(val);
+	if (Genome::isSexChrom(name)) rd_p_xy->Fill(val);
 	else                              rd_p->Fill(val);
 	position += bin_size;
       }
@@ -2047,18 +2060,18 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
 
     if (his_gc && his_p) { // Correlation of RD and GC
       int n = his_gc->GetNbinsX();
-      if (name == chrX || name == chrY)
+      if (Genome::isSexChrom(name))
 	for (int i = 1;i <= n;i++) 
 	  rd_gc_xy->Fill(his_gc->GetBinContent(i),
 			 his_p->GetBinContent(i));
-      else for (int i = 1;i <= n;i++) 
+      else for (int i = 1;i <= n;i++)
 	     rd_gc->Fill(his_gc->GetBinContent(i),
 			 his_p->GetBinContent(i));
     }
 
     if (his_u) { // Unique RD
       int n = his_u->GetNbinsX();
-      if (name == chrX || name == chrY)
+      if (Genome::isSexChrom(name))
 	for (int i = 1;i <= n;i++) rd_u_xy->Fill(his_u->GetBinContent(i));
       else
 	for (int i = 1;i <= n;i++) rd_u->Fill(his_u->GetBinContent(i));
@@ -2078,7 +2091,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
   // Correcting by GC-content
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
-    string name   = Genome::makeCanonical(chrom);
+    string name  = chrom;
     cout<<"Correcting counts by GC-content for '"<<chrom<<"' ..."<<endl;
 
     TString new_his_name = getSignalName(name,bin_size,useATcorr,true);
@@ -2091,7 +2104,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
       cerr<<"No histogram with GC content for '"<<chrom<<"' found."<<endl;
       cerr<<"No correction made."<<endl;
     } else {
-      if (name == chrX || name == chrY)
+      if (Genome::isSexChrom(name))
 	//correctGCbyFragment(his_p,his_gc,rd_gc_xy,rd_p_xy);
 	correctGC(his_p,his_gc,rd_gc_xy,rd_p_xy);
       else
@@ -2103,13 +2116,13 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
   }
 
   // Statistics for corrected counts
-  TH1* rd_p_GC    = new TH1D(getDistrName(chrAll,bin_size,useATcorr,true),
+  TH1* rd_p_GC    = new TH1D(getDistrName(Genome::CHRALL,bin_size,useATcorr,true),
 			     "RD all (GC corrected)",   5001,-0.5,5000.5);
-  TH1* rd_p_xy_GC = new TH1D(getDistrName("chrX",bin_size,useATcorr,true),
+  TH1* rd_p_xy_GC = new TH1D(getDistrName(Genome::CHRSEX,bin_size,useATcorr,true),
 			     "RD all XY (GC corrected)",5001,-0.5,5000.5);
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
-    string name   = Genome::makeCanonical(chrom);
+    string name  = chrom;
     cout<<"Making statistics for "<<chrom<<" after GC correction ..."<<endl;
     TH1 *his_p  = getHistogram(getSignalName(name,bin_size,useATcorr,true));
     TH1 *his_gc = getHistogram(getGCName(name,bin_size));
@@ -2120,7 +2133,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
     }
 
     int n = his_p->GetNbinsX();
-    if (name == chrX || name == chrY)
+    if (Genome::isSexChrom(name))
       for (int i = 1;i <= n;i++) rd_p_xy_GC->Fill(his_p->GetBinContent(i));
     else
       for (int i = 1;i <= n;i++) rd_p_GC->Fill(his_p->GetBinContent(i));
@@ -2130,7 +2143,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
       continue;
     }
 
-    if (name == chrX || name == chrY)
+    if (Genome::isSexChrom(name))
       for (int i = 1;i <= n;i++)
 	rd_gc_xy_GC->Fill(his_gc->GetBinContent(i),his_p->GetBinContent(i));
     else 
@@ -2153,9 +2166,9 @@ void HisMaker::eval(string *files,int n_files,bool useATcorr,bool useGCcorr)
 {
    for (int f = 0;f < n_files;f++) {
     root_file_name = files[f];
-    TH1 *his    = getHistogram(getDistrName(chrAll,bin_size,
+    TH1 *his    = getHistogram(getDistrName(Genome::CHRALL,bin_size,
 					    useATcorr,useGCcorr));
-    TH1 *his_xy = getHistogram(getDistrName("chrX",bin_size,
+    TH1 *his_xy = getHistogram(getDistrName(Genome::CHRSEX,bin_size,
 					    useATcorr,useGCcorr));
     double mean = 0,sigma = 0;
 
@@ -2298,16 +2311,14 @@ void HisMaker::produceHistogramsNew(string *user_chroms,int user_n_chroms)
 
   cout<<"Calculating values for slices ..."<<endl;
   for (int c = 0;c < user_n_chroms;c++) {
-    int index = getIndexForName(Genome::makeCanonical(user_chroms[c]),
-				chr_names,ncs);
+    int index = getIndexForName(user_chroms[c],chr_names,ncs);
     if (index < 0) {
       cerr<<"No data for '"<<user_chroms[c]<<"' ..."<<endl;
       continue;
     }
     for (Interval *i = ints[index];i;i = i->next()) {
       i->setUnique1(countReads(for_pos[index],i->start1(),i->end1()));
-      int index = getIndexForName(Genome::makeCanonical(i->name2()),
-				  chr_names,ncs);
+      int index = getIndexForName(i->name2(),chr_names,ncs);
       if (index < 0) continue;
       i->setOtherIndex(index);
       i->setUnique2(countReads(for_pos[index],i->start2(),i->end2()));
@@ -2325,7 +2336,7 @@ void HisMaker::produceHistogramsNew(string *user_chroms,int user_n_chroms)
   }
 
   for (int c = 0;c < user_n_chroms;c++) {
-    string name = Genome::makeCanonical(user_chroms[c]);
+    string name = user_chroms[c];
     int index = getIndexForName(name,chr_names,ncs);
     if (index < 0) {
       cerr<<"No data for '"<<user_chroms[c]<<"' ..."<<endl;
@@ -2442,7 +2453,7 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
     string chrom = user_chroms[c];
     cout<<"Calculating histograms with bin size of "<<bin_size<<" for '"
 	<<chrom<<"' ..."<<endl;
-    string name = Genome::makeCanonical(chrom);
+    string name = chrom;
     int org_len = chrom_lens[c];
     if (org_len <= 0) continue;
     int n_bins = org_len/bin_size + 1;
@@ -2468,8 +2479,8 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
       // Calculating array with average RD for GC
 //       int loc_bin = 1000;
 //       TString loc_dir = getDirName(loc_bin);
-//       TH2 *fh_rd_gc = (TH2*)getHistogram("rd_gc_1000",rfn,loc_dir);
-//       TH1 *fh_mean  = getHistogram(getDistrName(chrAll,loc_bin,false,false),
+//       TH2 *fh_rd_gc = (TH2*)getHistogram(rfn,loc_dir,"rd_gc_1000");
+//       TH1 *fh_mean  = getHistogram(getDistrName(Genome::CHRALL,loc_bin,false,false),
 // 				   rfn,loc_dir);
 //       TH1 *fh_gc    = getHistogram(getGCName(name,loc_bin),rfn,loc_dir);
 //       int N = fh_rd_gc->GetNbinsX();
@@ -2531,10 +2542,12 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
     
     // Creating histograms with GC-content
     cout<<"Making GC histogram for '"<<chrom<<"' ..."<<endl;
-    if (readChromosome(name,seq_buffer,org_len) != org_len) {
-      cerr<<"Read sequence is of different length from expectation."<<endl;
-      cerr<<"Doing nothing."<<endl;
-    } else {
+    int n_read = readChromosome(name,seq_buffer,org_len);
+    if (n_read != org_len)
+      cerr<<"Sequence length ("<<n_read<<") is different from expectation ("
+	  <<org_len<<") for '"<<chrom<<"'."<<endl
+	  <<"Doing nothing!"<<endl;
+    else {
       int n = his_gc->GetNbinsX();
       for (int i = 1;i <= n;i++) {
 	int low = (int) his_gc->GetBinLowEdge(i);
@@ -2604,11 +2617,12 @@ void HisMaker::produceHistograms_try_correct(string *user_chroms,int n_chroms)
   TH2 *his_test      = new TH2D("new_rd_gc","GC vs RD correlation",
 				MAX_N + 1,-half_bin,MAX_N + half_bin,
 				5001,-0.5,5000.5);
-  TH1* rd_p          = new TH1D(getDistrName(chrAll,bin_size,false,false),
+  TH1* rd_p          = new TH1D(getDistrName(Genome::CHRALL,bin_size,
+					     false,false),
 				"RD all",   5001,-0.5,5000.5);
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
-    string name = Genome::makeCanonical(chrom);
+    string name  = chrom;
     int org_len = chrom_lens[c];
     if (org_len <= 0) continue;
     cout<<"Calculating histograms with bin size of "<<bin_size<<" for '"
@@ -2639,10 +2653,12 @@ void HisMaker::produceHistograms_try_correct(string *user_chroms,int n_chroms)
     // Creating histograms with GC-content
     cout<<"Making GC histogram ..."<<endl;
     int *at_run,atn = 0;
-    if (readChromosome(name,seq_buf,org_len) == org_len) 
+    int n_read = readChromosome(name,seq_buf,org_len);
+    if (n_read != org_len)
       atn = parseGCandAT(seq_buf,org_len,&at_run,his_gc);
-    else cerr<<"Read sequence is different from expectation '"
-	     <<chrom<<"'."<<endl;
+    else cerr<<"Sequence length ("<<n_read
+	  <<") is different from expectation ("<<org_len<<") for '"
+	  <<chrom<<"'."<<endl;
     for (int p = 0;p < org_len;p++) {
       char c = seq_buf[p];
       if      (c == 'a' || c == 't' || c == 'A' || c == 'T') seq_buf[p] = '1';
@@ -2750,29 +2766,31 @@ void HisMaker::produceHistograms_try_correct(string *user_chroms,int n_chroms)
     av_for_gc[i] = getMedian(tmp);
     //cout<<i<<" "<<tmp->GetMean()<<" "<<av_for_gc[i]<<endl;
   }
-  TH2 *his_read_frg = (TH2*)getHistogram("read_frg_len",root_file_name,"");
+  TH2 *his_read_frg = (TH2*)getHistogram(root_file_name,"","read_frg_len");
   TH1 *his_frg  = his_read_frg->ProjectionY("his_frg"); normalize(his_frg);
 
   double average = getMean(rd_p),av_over = bin_size/average/MAX_N;
   cout<<"average = "<<average<<endl;
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
-    string name = Genome::makeCanonical(chrom);
-    int org_len = chrom_lens[c];
+    string name  = chrom;
+    int org_len  = chrom_lens[c];
     if (org_len <= 0) continue;
 
     cout<<"Correcting signal for '"<<chrom<<"' ..."<<endl;
     memset(counts_p,0,(org_len + 1)*sizeof(short));
-    TH1 *his_rd_p = getHistogram(getSignalName(name,bin_size,false,false),
-				 root_file_name,dir_name);
+    TH1 *his_rd_p = getHistogram(root_file_name,dir_name,
+				 getSignalName(name,bin_size,false,false));
 
     cout<<"Reading tree ..."<<endl;
     if (!readTreeForChromosome(root_file_name,chrom,counts_p,NULL))
       continue;
 
     cout<<"Reading sequence ..."<<endl;
-    if (readChromosome(name,seq_buf,org_len) != org_len)
-      cerr<<"Read sequence is different from expectation for '"
+    int n_read = readChromosome(name,seq_buf,org_len);
+    if (n_read != org_len)
+      cerr<<"Sequence length ("<<n_read
+	  <<") is different from expectation ("<<org_len<<") for '"
 	  <<chrom<<"'."<<endl;
     for (int p = 0;p < org_len;p++) {
       char c = seq_buf[p];
@@ -2925,7 +2943,7 @@ void HisMaker::aggregate(string *files,int n_files,string *chroms,int n_chroms)
   int   *gc_starts  = new int[400000];
   int   *gc_ends    = new int[400000];
   for (int chr = 0;chr < n_chroms;chr++) {
-    string name = Genome::makeCanonical(chroms[chr]);
+    string name = chroms[chr];
     cout<<"Aggregating for "<<name<<" ..."<<endl;
     int atn = 0,gcn = 0;
     int len_seq = readChromosome(name,seq_buffer,250000000);
@@ -3131,7 +3149,7 @@ int HisMaker::getChromNamesWithTree(string *names,string rfn)
 int HisMaker::getChromLenWithTree(string chrom,string rfn)
 {
   int len = 0;
-  string name  = Genome::makeCanonical(chrom);
+  string name  = chrom;
   if (rfn.length() == 0) rfn = root_file_name;
   TFile file(rfn.c_str(),"Read");
   if (!file.IsZombie()) { 
@@ -3259,7 +3277,7 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
 	int index = findIndex(cnames,ncs,name);
 	if (index < 0) {
 	  index = ncs++;
-	  cnames[index] = Genome::makeCanonical(name);
+	  cnames[index] = name;
 	  clens[index]  = refGenome_->chromLen(c);
 	}
 	if (clens[index] != refGenome_->chromLen(c))
@@ -3279,7 +3297,7 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
 	int index = findIndex(cnames,ncs,name);
 	if (index < 0) {
 	  index = ncs++;
-	  cnames[index] = Genome::makeCanonical(name);
+	  cnames[index] = name;
 	  clens[index]  = parser->chromLen(c);
 	}
 	if (clens[index] != parser->chromLen(c))
@@ -3349,7 +3367,7 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
 // 	char *seq_buffer = new char[len + 1000];
 // 	if (readChromosome(cnames[chr_ind],seq_buffer,len) == len)
 // 	  atlens[chr_ind] = parseGCandAT(seq_buffer,len,&at_se[chr_ind]);
-// 	else cerr<<"Read sequence is different from expectation."<<endl;
+// 	else cerr<<"Sequence length is different from expectation."<<endl;
 // 	if (atlens[chr_ind] < 0) atlens[chr_ind] = 0;
 // 	delete[] seq_buffer;
 //       }
@@ -3520,13 +3538,13 @@ TString HisMaker::getDirName(int bin)
   return ret;
 }
 
-TString HisMaker::getDistrName(TString chr,int bin,
+TString HisMaker::getDistrName(string chr,int bin,
 			       bool useATcorr,bool useGCcorr)
 {
   TString ret = "rd_p_";
-  if (chr == chrX || chr == chrY) ret += "xy_";
-  if (useATcorr)                  ret += "AT_";
-  if (useGCcorr)                  ret += "GC_";
+  if (Genome::isSexChrom(chr)) ret += "xy_";
+  if (useATcorr)  ret += "AT_";
+  if (useGCcorr)  ret += "GC_";
   ret += bin;
   return ret;
 }
@@ -3574,7 +3592,8 @@ TString HisMaker::getGCName(TString chrom,int bin)
 
 int HisMaker::readChromosome(string chrom,char *seq,int max_len)
 {
-  seq[0] = '\0';
+  seq[0]   = '\0';
+  max_len += 2;
 
   int ret = 0;
   string chrom_file = dir_ + "/" + chrom + ".fa";
@@ -3584,31 +3603,17 @@ int HisMaker::readChromosome(string chrom,char *seq,int max_len)
     cerr<<"No chromosome/contig information parsed."<<endl;
     return ret;
   }
-  while (!file.eof()) {
-    file.getline(seq,128);
-    if (*seq == '>') break;
-  }
-  if (file.eof()) {
+  while (file.good() && *seq != '>') file.getline(seq,128);
+  if (!file.good()) {
     cerr<<"Can't find sequence in file '"<<chrom_file<<"'."<<endl;
     cerr<<"No chromosome/contig information parsed."<<endl;
     return ret;
   }
-  char *s = seq;
-  while (!file.eof()) {
-    if (max_len > 128) file.getline(seq,max_len);
-    else               file.getline(seq,128);
-    while (*seq != '\0') {
-      max_len--;
-      if (max_len < 0) break;
-      seq++;
-      ret++;
-    }
-    if (max_len < 0) {
-      cerr<<"Maximum buffer size exceeded."<<endl;
-      break;
-    }
+  while (file.good()) {
+    file.getline(seq,max_len);
+    while (*seq++ != '\0' && max_len-- > 0) ret++;
   }
-
   file.close();
+
   return ret;
 }
