@@ -2053,7 +2053,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
       for (int i = 1;i <= n;i++) { // All RD
 	double val = his_p->GetBinContent(i);
 	if (Genome::isSexChrom(name)) rd_p_xy->Fill(val);
-	else                              rd_p->Fill(val);
+	else                          rd_p->Fill(val);
 	position += bin_size;
       }
     }
@@ -2189,6 +2189,7 @@ void HisMaker::eval(string *files,int n_files,bool useATcorr,bool useGCcorr)
 
 int HisMaker::countGCpercentage(char *seq,int low,int up)
 {
+  if (low > up) return -100;
   int n_a = 0, n_t = 0, n_g = 0, n_c = 0;
   for (int p = low;p < up;p++) {
     char c = seq[p];
@@ -2552,11 +2553,13 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
       for (int i = 1;i <= n;i++) {
 	int low = (int) his_gc->GetBinLowEdge(i);
 	int up  = (int) (low + his_gc->GetBinWidth(i));
+	if (up > org_len) up = org_len;
 	his_gc->SetBinContent(i,countGCpercentage(seq_buffer,low,up));
       }
-      
       writeHistogramsToBinDir(his_gc);
     }
+    cout<<"Done."<<endl;
+
     // Deleting objects
     delete his_rd_u;
     delete his_rd_p;
@@ -3197,6 +3200,7 @@ int HisMaker::parseGCandAT(char *seq,int len,int **addr_for_at,TH1 *his_gc)
     for (int i = 1;i <= n;i++) {
       int low = (int) his_gc->GetBinLowEdge(i);
       int up  = (int) (low + his_gc->GetBinWidth(i));
+      if (up > len) up = len;
       his_gc->SetBinContent(i,countGCpercentage(seq,low,up));
     }
   }
@@ -3599,11 +3603,15 @@ int HisMaker::readChromosome(string chrom,char *seq,int max_len)
   string chrom_file = dir_ + "/" + chrom + ".fa";
   ifstream file(chrom_file.c_str());
   if (!file.is_open()) {
-    cerr<<"Can't open file '"<<chrom_file<<"'."<<endl;
-    cerr<<"No chromosome/contig information parsed."<<endl;
-    return ret;
+    chrom_file = dir_ + "/chr" + chrom + ".fa";
+    file.open(chrom_file.c_str());
+    if (!file.is_open()) {
+      cerr<<"Can't open file with chromosome sequence."<<endl;
+      cerr<<"No chromosome/contig information parsed."<<endl;
+      return ret;
+    }
   }
-  while (file.good() && *seq != '>') file.getline(seq,128);
+  while (file.good() && *seq != '>') file.getline(seq,1024);
   if (!file.good()) {
     cerr<<"Can't find sequence in file '"<<chrom_file<<"'."<<endl;
     cerr<<"No chromosome/contig information parsed."<<endl;
@@ -3611,7 +3619,8 @@ int HisMaker::readChromosome(string chrom,char *seq,int max_len)
   }
   while (file.good()) {
     file.getline(seq,max_len);
-    while (*seq++ != '\0' && max_len-- > 0) ret++;
+    char *tmp = seq;
+    while (*tmp++ != '\0' && max_len-- > 0) ret++;
   }
   file.close();
 

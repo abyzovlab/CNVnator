@@ -110,7 +110,7 @@ string Genome::makeCanonical(string name)
 bool Genome::isSexChrom(string name)
 {
   string tmp = makeCanonical(name);
-  if (name == CHRSEX || name == CHRX || name == CHRY) return true;
+  if (tmp == CHRSEX || tmp == CHRX || tmp == CHRY) return true;
   return false;
 }
 
