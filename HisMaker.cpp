@@ -445,16 +445,17 @@ void HisMaker::generateView(TString chrom,int start,int end,
   title += end;
   canv_view->SetTitle(title);
   
-  TString canon          = Genome::makeCanonical(chrom.Data());
+  TString alt_chr               = Genome::canonicalChromName(chrom.Data());
+  if (alt_chr == chrom) alt_chr = Genome::extendedChromName(chrom.Data());
   TString name           = getRawSignalName(chrom,bin_size);
-  TString alt_name       = getRawSignalName(canon,bin_size);
+  TString alt_name       = getRawSignalName(alt_chr,bin_size);
   TString name_his       = getSignalName(chrom,bin_size,false,false);
-  TString alt_name_his   = getSignalName(canon,bin_size,false,false);
+  TString alt_name_his   = getSignalName(alt_chr,bin_size,false,false);
   TString name_corr      = getSignalName(chrom,bin_size,useATcorr,useGCcorr);
-  TString alt_name_corr  = getSignalName(canon,bin_size,useATcorr,useGCcorr);
+  TString alt_name_corr  = getSignalName(alt_chr,bin_size,useATcorr,useGCcorr);
   TString name_partition = getPartitionName(chrom,bin_size,
 					    useATcorr,useGCcorr);
-  TString alt_name_part  = getPartitionName(canon,bin_size,
+  TString alt_name_part  = getPartitionName(alt_chr,bin_size,
 					    useATcorr,useGCcorr);
   TString name_merge     = name_partition + "_merge";
   TString alt_name_merge = alt_name_part  + "_merge";
@@ -698,11 +699,6 @@ bool HisMaker::parseInput(TString &input,TString &chrom,
   while (i < input.Length() && input[i] == ' ') i++; // Space
   while (i < input.Length() && input[i] != ' ')
     option   += input[i++];
-//   if (chrom.Length() < 4) {
-//     TString tmp = "chr";
-//     tmp += chrom;
-//     chrom = tmp;
-//   }
 
   if (input.Length() <= 0 || !start.IsDigit() || !end.IsDigit()) {
     if (input.Length() <= 0) ;
@@ -2984,7 +2980,8 @@ void HisMaker::aggregate(string *files,int n_files,string *chroms,int n_chroms)
 	continue;
       }
       TTree *tree = (TTree*)file.Get(name.c_str());
-      if (!tree) tree = (TTree*)file.Get(Genome::makeCanonical(name).c_str());
+      if (!tree)
+	tree = (TTree*)file.Get(Genome::canonicalChromName(name).c_str());
       if (!tree) {
 	cerr<<"Can't find tree for '"<<name<<"' in file '"
 	    <<fileName<<"'."<<endl;
@@ -3212,9 +3209,9 @@ int HisMaker::parseGCandAT(char *seq,int len,int **addr_for_at,TH1 *his_gc)
 
 int findIndex(string *arr,int n,string name)
 {
-  string can_name = Genome::makeCanonical(name);
+  string can_name = Genome::canonicalChromName(name);
   for (int i = 0;i < n;i++)
-    if (Genome::makeCanonical(arr[i]) == can_name) return i;
+    if (Genome::canonicalChromName(arr[i]) == can_name) return i;
   return -1;
 }
 
@@ -3482,7 +3479,8 @@ bool HisMaker::readTreeForChromosome(TString fileName,string chrom,
     return false;
   }
   TTree *tree = (TTree*)file.Get(chrom.c_str());
-  if (!tree) tree = (TTree*)file.Get(Genome::makeCanonical(chrom).c_str());
+  if (!tree)
+    tree = (TTree*)file.Get(Genome::canonicalChromName(chrom).c_str());
   if (!tree) {
     cerr<<"Can't find tree for '"<<chrom<<"' in file '"
 	<<fileName<<"'."<<endl;
@@ -3603,7 +3601,7 @@ int HisMaker::readChromosome(string chrom,char *seq,int max_len)
   string chrom_file = dir_ + "/" + chrom + ".fa";
   ifstream file(chrom_file.c_str());
   if (!file.is_open()) {
-    chrom_file = dir_ + "/chr" + chrom + ".fa";
+    chrom_file = dir_ + "/" + Genome::extendedChromName(chrom) + ".fa";
     file.open(chrom_file.c_str());
     if (!file.is_open()) {
       cerr<<"Can't open file with chromosome sequence."<<endl;

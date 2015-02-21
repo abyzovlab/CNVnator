@@ -23,20 +23,21 @@ void Genotyper::printGenotype(string chr,int start,int end,
     return;
   }
 
-  string canon              = Genome::makeCanonical(chr);
+  string alt_chr              = Genome::canonicalChromName(chr);
+  if (alt_chr == chr) alt_chr = Genome::extendedChromName(chr);
   TString nameSignal        = _maker->getSignalName(chr,  _bin,
 						    useATcorr,useGCcorr);
-  TString alt_nameSignal    = _maker->getSignalName(canon,_bin,
+  TString alt_nameSignal    = _maker->getSignalName(alt_chr,_bin,
 						    useATcorr,useGCcorr);
   TString nameDistr         = _maker->getDistrName(chr,   _bin,
 						   useATcorr,useGCcorr);
-  TString alt_nameDistr     = _maker->getDistrName(canon, _bin,
+  TString alt_nameDistr     = _maker->getDistrName(alt_chr, _bin,
 						   useATcorr,useGCcorr);
   TString nameDistrAll      = _maker->getDistrName(Genome::CHRALL,_bin,
 						   useATcorr,useGCcorr);
   TString nameDistr1000     = _maker->getDistrName(chr,   1000,
 						   useATcorr,useGCcorr);
-  TString alt_nameDistr1000 = _maker->getDistrName(canon, 1000,
+  TString alt_nameDistr1000 = _maker->getDistrName(alt_chr, 1000,
 						   useATcorr,useGCcorr);
   TString nameDistr1000All  = _maker->getDistrName(Genome::CHRALL,1000,
 						   useATcorr,useGCcorr);

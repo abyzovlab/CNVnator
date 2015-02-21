@@ -25,7 +25,8 @@ private:
 public:
   static const string CHRALL, CHRSEX;
   static Genome *get(string name);
-  static string makeCanonical(string name);
+  static string canonicalChromName(string name);
+  static string extendedChromName(string name);
   static bool   isSexChrom(string name);
 
 public:
