@@ -505,7 +505,7 @@ void HisMaker::genotype(string *files,int n_files,
     TString chrom = "",start = "",end = "",option = "";
     if (parseInput(input,chrom,start,end,option)) {
       if (option == "view") {
-	generateView(chrom,start.Atoi(),end.Atoi(),useATcorr,useGCcorr);
+	generateView(chrom,start.Atoi(),end.Atoi(),useATcorr,useGCcorr,files);
       } else {
 	for (int i = 0;i < n_files;i++)
 	  gs[i]->printGenotype(chrom.Data(),
@@ -3617,8 +3617,8 @@ int HisMaker::readChromosome(string chrom,char *seq,int max_len)
   }
   while (file.good()) {
     file.getline(seq,max_len);
-    char *tmp = seq;
-    while (*tmp++ != '\0' && max_len-- > 0) ret++;
+    while (*seq++ != '\0' && max_len-- > 0) ret++;
+    seq--;
   }
   file.close();
 
