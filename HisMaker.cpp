@@ -3448,9 +3448,9 @@ void HisMaker::writeTreeForChromosome(string chrom,short *arr_p,
   int position;
   TTree *tree = new TTree(chrom.c_str(),description.c_str());
   tree->SetMaxTreeSize(20000000000); // ~20 Gb
-  tree->Branch("position", &position, "position/I");
-  tree->Branch("rd_unique",&rd_u,"rd_u/S");
-  tree->Branch("rd_parity",&rd_p,"rd_p/S");
+  tree->Branch("position", &position,"position/I");
+  tree->Branch("rd_unique",&rd_u,    "rd_u/S");
+  tree->Branch("rd_parity",&rd_p,    "rd_p/S");
   // Filling the tree
   for (int i = 0;i < len;i++) {
     //if (i%100000 == 0) cout<<i<<endl;

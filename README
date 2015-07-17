@@ -11,7 +11,7 @@ variable (see ROOT documentation).
 $ cd src/samtools
 $ make
 
-Even if compilation is not completed but file libbam.a has been created you
+Even if compilation is not completed, but the file libbam.a has been created, you
 can continue.
 
 $ cd ../
@@ -23,18 +23,16 @@ If make doesn't work, try "make OMP=no" which will disable parallel support.
 Yeppp (http://www.yeppp.info/) is a library which provides high-performance implementations of math functions.
 To install with Yeppp support, download Yeppp from http://bitbucket.org/MDukhan/yeppp/downloads/yeppp-1.0.0.tar.bz2
 and extract it at a location of your choice. Set YEPPPLIBDIR and YEPPPINCLUDEDIR directories appropriately. Typically,
-for Linux-based systems on x86-64, YEPPPLIBDIR would be yeppp-1.0.0/binaries/linux/x86_64/ and YEPPPINCLUDEDIR would be
+for Linux-based systems on x86-64, YEPPPLIBDIR will be yeppp-1.0.0/binaries/linux/x86_64/ and YEPPPINCLUDEDIR will be
 yeppp-1.0.0/library/headers. To build, type make YEPPPLIBDIR=... YEPPPINCLUDEDIR=... . To disable OpenMP also add OMP=no
 to the make command.
 
 2. Predicting CNV regions
 =========================
 
-Running involves few steps outlined below. Chromosome names and lengths are
-parsed from sam/bam file header. Using -genome option one can overwrite
-this default behavior. 
-
-
+Running involves a few steps outlined below. Chromosome names and lengths are
+parsed from sam/bam file header. One can override this default behavior by 
+using the -genome option. 
 
 >>>EXTRACTING READ MAPPING FROM BAM/SAM FILES
 
@@ -46,18 +44,18 @@ file.bam  -- bam files.
 
 Chromosome names must be specified the same way as they are described in sam/bam
 header, e.g., chrX or X. One can specify multiple chromosomes separated by
-space. If no chromosome specified, read mapping is extracted for all chromosomes
-in sam/bam file. Note, that this would require machines with large physical
+space. If no chromosome is specified, read mapping is extracted for all chromosomes
+in sam/bam file. Note that this would require machines with a large physical
 memory of 7Gb. Extracting read mapping for subsets of chromosomes is a way
-around this issue. Note, root file is not being overwritten.
-To have correct q0 field for CNV calls (see below) one need to use
+around this issue. Also note that the root file is not being overwritten.
+To have correct q0 field for CNV calls (see below), one needs to use the
 option -unique when extracting read mapping from bam/sam files.
 
 Example:
 
 ./cnvnator -root NA12878.root -chrom 1 2 3  -tree NA12878_ali.bam
 
-for bam files with the header like
+for bam files with a header like this:
 @HD VN:1.4    GO:none  SO:coordinate
 @SQ SN:1      LN:249250621
 @SQ SN:2      LN:243199373
@@ -67,7 +65,7 @@ for bam files with the header like
 or
 
 ./cnvnator -root NA12878.root -chrom chr1 chr2 chr3 -tree NA12878_ali.bam
-for bam files with the header like
+for bam files with a header like this:
 @HD VN:1.4    GO:none  SO:coordinate
 @SQ SN:chr1   LN:249250621
 @SQ SN:chr2   LN:243199373
@@ -84,14 +82,15 @@ is equivalent to
 ./cnvnator -root NA12878.root -chrom 4 5 6 7 8 9 -tree NA12878_ali.bam
 
 
->>>GENERATING HISTOGRAM
+
+>>>GENERATING A HISTOGRAM
 
 $ ./cnvnator [-genome name] -root file.root [-chrom name1 ...] -his bin_size [-d dir]
 
-This step is not memory consuming and can be done for all chromosomes
-at once, still can be done for a subset of chromosomes. Files with
-chromosome sequences are required and should reside in running
-directory or directory specified by -d option. Files should be named
+This step is not memory consuming and so can be done for all chromosomes
+at once. It can, of course, be carried for a subset of chromosomes also. 
+Files with chromosome sequences are required and should reside in the running
+directory or in the directory specified by the -d option. Files should be named
 as: chr1.fa, chr2.fa, etc.
 
 
@@ -125,22 +124,23 @@ CNV_type coordinates CNV_size normalized_RD e-val1 e-val2 e-val3 e-val4 q0
 
 normalized_RD -- normalized to 1.
 e-val1        -- is calculated using t-test statistics.
-e-val2        -- is from probability of RD values within the region to be in
-the tails of gaussian distribution describing frequencies of RD values in bins.
+e-val2        -- is from the probability of RD values within the region to be in
+the tails of a gaussian distribution describing frequencies of RD values in bins.
 e-val3        -- same as e-val1 but for the middle of CNV
 e-val4        -- same as e-val2 but for the middle of CNV
 q0            -- fraction of reads mapped with q0 quality
 
-To have correct output at q0 field one need to use option -unique when extracting read mapping from bam/sam files.
+To have correct output of q0 field one needs to use the option -unique when extracting read mapping from bam/sam files.
 
->>>MERGIN ROOT FILES
+
+
+>>>MERGING ROOT FILES
 
 ./cnvnator [-genome name]-root out.root [-chrom name ...] -merge file1.root ...
 
 Merging can be used when combining read mappings extracted from multiple files.
-Note, histogram generation, statistics calculation, signal partitioning and
+Note, histogram generation, statistics calculation, signal partitioning, and
 CNV calling should be completed/redone after merging.
-
 
 
 
@@ -148,7 +148,7 @@ CNV calling should be completed/redone after merging.
 
 ./cnvnator -root file.root [-chrom chr_name1 ...] -view bin_size [-ngc]
 
-Once prompted enter a genomic region, e.g. 
+Once prompted enter a genomic region, e.g., 
 >12:11396601-11436500
  or
 >chr12:11396601-11436500
@@ -157,8 +157,8 @@ Once prompted enter a genomic region, e.g.
  or
 >chr12 11396601 11436500
 
-Additionally one can specify length of flanking regions (default is 10 kb) to
-be also displayed, e.g.
+Additionally, one can specify the length of flanking regions (default is 10 kb) to
+be also displayed, e.g.,
 >12:11396601-11436500 100000
  or
 >chr12:11396601-11436500 100000
@@ -167,7 +167,7 @@ be also displayed, e.g.
  or
 >chr12 11396601 11436500 100000
 
-One can also perform instant genotyping by adding word 'genotype', e.g.
+One can also perform instant genotyping by adding the word 'genotype', e.g.,
 >12:11396601-11436500 genotype
  or
 >chr12:11396601-11436500 genotype
@@ -180,8 +180,13 @@ One can also perform instant genotyping by adding word 'genotype', e.g.
 
 3. Genotyping genomic regions
 =============================
+
+For efficient genotype calculations, we recommend that you sort the list of regions by
+chromosomes.
+
 ./cnvnator -root file.root -genotype bin_size [-ngc]
-Once prompted enter a genomic region, e.g. 
+
+Once prompted enter a genomic region, e.g., 
 >12:11396601-11436500
  or
 >chr12:11396601-11436500
@@ -190,7 +195,7 @@ Once prompted enter a genomic region, e.g.
  or
 >chr12 11396601 11436500
 
-One can also perform instant visualization by adding word 'view', e.g.
+One can also perform instant visualization by adding the word 'view', e.g.,
 >12:11396601-11436500 view
  or
 >chr12:11396601-11436500 view
@@ -199,20 +204,19 @@ One can also perform instant visualization by adding word 'view', e.g.
  or
 >chr12 11396601 11436500 view
 
-For genotyping of multiple regions one can use input piping, e.g.
+For genotyping of multiple regions one can use input piping, e.g.,
 ./cnvnator -root NA12878.root -genotype 100 << EOF
 12:11396601-11436500
 22:20999401-21300400
 exit
 EOF
 
-Another example
+Another example,
 
-awk '{ print $2 } END { print "exit" }' cals.cnvnator | ./cnvnator -root NA12878.root -genotype 100
+awk '{ print $2 } END { print "exit" }' calls.cnvnator | ./cnvnator -root NA12878.root -genotype 100
 
 
-For efficient calculation I recommend you sort your list of regions by
-chromosome.
+
 
 
 

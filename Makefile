@@ -1,23 +1,24 @@
-VERSION	       = v0.3.1
+VERSION	       = v0.3.2
 override LIBS += -lz
 
 ifneq ($(wildcard $(ROOTSYS)/lib/root),)
-        ROOTLIBS  = -L$(ROOTSYS)/lib/root -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d \
-			-lGpad -lTree -lRint -lMatrix -lPhysics \
-			-lMathCore -lThread -lGui
+        ROOTLIBS = -L$(ROOTSYS)/lib/root -lCore -lRIO -lHist -lGraf -lGpad -lTree -lMathCore
 else
-        ROOTLIBS  = -L$(ROOTSYS)/lib -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d \
-			-lGpad -lTree -lRint -lMatrix -lPhysics \
-			-lMathCore -lThread -lGui
+        ROOTLIBS = -L$(ROOTSYS)/lib      -lCore -lRIO -lHist -lGraf -lGpad -lTree -lMathCore
+endif
+
+ifneq ($(wildcard $(ROOTSYS)/include/root),)
+        INC = -I$(ROOTSYS)/include/root -I$(SAMDIR)
+else
+        INC = -I$(ROOTSYS)/include      -I$(SAMDIR)
 endif
 
 SAMDIR = samtools
 SAMLIB = $(SAMDIR)/libbam.a
-
-ifneq ($(wildcard $(ROOTSYS)/include/root),)
-        INC    = -I$(ROOTSYS)/include/root -I$(SAMDIR)
-else
-        INC    = -I$(ROOTSYS)/include -I$(SAMDIR)
+HTSDIR = $(wildcard $(SAMDIR)/htslib-*)
+ifneq ($(HTSDIR),)
+        SAMLIB += $(HTSDIR)/libhts.a
+        INC    += -I$(HTSDIR)
 endif
 
 ifeq ($(OMP),no)
@@ -35,10 +36,11 @@ ifneq ($(YEPPPINCLUDEDIR),)
         INC += -I$(YEPPPINCLUDEDIR) -DUSE_YEPPP
 endif
 
-CXX    = g++ -O3 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
+CXX    = g++ -O3 -std=c++11 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
 
 OBJDIR = obj
 OBJS   = $(OBJDIR)/cnvnator.o  \
+	 $(OBJDIR)/EXOnator.o  \
 	 $(OBJDIR)/HisMaker.o  \
 	 $(OBJDIR)/AliParser.o \
 	 $(OBJDIR)/Genotyper.o \
@@ -54,14 +56,14 @@ SRCDIR	     = $(MAINDIR)/src
 all: cnvnator
 
 cnvnator: $(OBJS)
-	$(CXX) -o $@ $(OBJS) $(SAMLIB) $(LIBS) $(ROOTLIBS)
+	$(CXX) -o $@ $(OBJS) $(SAMLIB) $(LIBS) $(ROOTLIBS) $(HTSLIB)
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(OBJDIR)
 	$(CXX) $(INC) -c $< -o $@
 
 clean:
-	rm -f $(OBJS)
+	rm -fr $(OBJDIR) cnvnator
 
 distribution: clean all
 	@echo Creating directory ...

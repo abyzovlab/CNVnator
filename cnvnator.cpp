@@ -12,6 +12,7 @@ using namespace std;
 // Application includes
 #include "AliParser.hh"
 #include "HisMaker.hh"
+#include "EXOnator.hh"
 
 int main(int argc,char *argv[])
 {
@@ -61,29 +62,31 @@ int main(int argc,char *argv[])
   }
 #endif
 
-  static const int OPT_TREE       = 0x0001;
-  static const int OPT_MERGE      = 0x0002;
-  static const int OPT_HIS        = 0x0004;
-  static const int OPT_HISMERGE   = 0x0008;
-  static const int OPT_STAT       = 0x0010;
-  static const int OPT_PARTITION  = 0x0020;
-  static const int OPT_EPARTITION = 0x0040;
-  static const int OPT_CALL       = 0x0080;
-  static const int OPT_VIEW       = 0x0100;
-  static const int OPT_GENOTYPE   = 0x0200;
-  static const int OPT_EVAL       = 0x0400;
-  static const int OPT_PE         = 0x0800;
+  static const int OPT_TREE       = 0x00001;
+  static const int OPT_MERGE      = 0x00002;
+  static const int OPT_HIS        = 0x00004;
+  static const int OPT_HISMERGE   = 0x00008;
+  static const int OPT_STAT       = 0x00010;
+  static const int OPT_PARTITION  = 0x00020;
+  static const int OPT_EPARTITION = 0x00040;
+  static const int OPT_CALL       = 0x00080;
+  static const int OPT_VIEW       = 0x00100;
+  static const int OPT_GENOTYPE   = 0x00200;
+  static const int OPT_EVAL       = 0x00400;
+  static const int OPT_PE         = 0x00800;
+  static const int OPT_PANEL      = 0x01000;
+  static const int OPT_FIT        = 0x02000;
 
-  static const int OPT_SPARTITION = 0x1000;
-  static const int OPT_HIS_NEW    = 0x2000;
-  static const int OPT_AGGREGATE  = 0x4000;
+  static const int OPT_SPARTITION = 0x04000;
+  static const int OPT_HIS_NEW    = 0x08000;
+  static const int OPT_AGGREGATE  = 0x10000;
 
   // tree, merge, his, stat, partition, spartition, call, view, genotype
   int max_opts = 10000, n_opts = 0, opts[max_opts], bins[max_opts], gbin = 0;
   for (int i = 0;i < n_opts;i++) bins[i] = 0;
   bool useGCcorr = true,useATcorr = false;
   bool forUnique = false,relaxCalling = false;
-  string out_root_file(""),call_file("");
+  string out_root_file(""),call_file(""),group_name("");
   string chroms[1000],data_files[100000],root_files[100000] = {""},dir = ".";
   int n_chroms = 0,n_files = 0,n_root_files = 0,range = 128, qual = 20;
   double over = 0.8;
@@ -128,6 +131,21 @@ int main(int argc,char *argv[])
       if (option == "-eval")       opts[n_opts] = OPT_EVAL;
       if (option == "-aggregate")  opts[n_opts] = OPT_AGGREGATE;
       bins[n_opts++] = bs;
+    } else if (option == "-panel") {
+      opts[n_opts++] = OPT_PANEL;
+    } else if (option == "-fit")   {
+      opts[n_opts++] = OPT_FIT;
+      if (index < argc && argv[index][0] != '-') group_name = argv[index++];
+      else {
+	cout<<"Please provide name of a sample group."<<endl;
+	return 0;
+      }
+    } else if (option == "-outroot") {
+      if (index < argc && argv[index][0] != '-') out_root_file = argv[index++];
+      else {
+	cout<<"Please provide new root-file name."<<endl;
+	return 0;
+      }
     } else if (option == "-root") {
       while (index < argc && argv[index][0] != '-')
 	if (strlen(argv[index++]) > 0)
@@ -279,6 +297,15 @@ int main(int argc,char *argv[])
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
       maker.setDataDir(dir);
       maker.produceHistogramsNew(chroms,n_chroms);
+    }
+    // EXOnator options
+    if (option == OPT_PANEL) { // panel
+      EXOnator exonator(out_root_file);
+      exonator.makeTables();
+    }
+    if (option == OPT_FIT) { // fit
+      EXOnator exonator(out_root_file);
+      exonator.fit(group_name);
     }
     if (option == OPT_AGGREGATE) { // aggregate
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
