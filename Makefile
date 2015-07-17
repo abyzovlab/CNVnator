@@ -56,7 +56,7 @@ SRCDIR	     = $(MAINDIR)/src
 all: cnvnator
 
 cnvnator: $(OBJS)
-	$(CXX) -o $@ $(OBJS) $(SAMLIB) $(LIBS) $(ROOTLIBS) $(HTSLIB)
+	$(CXX) -o $@ $(OBJS) $(SAMLIB) $(LIBS) $(ROOTLIBS)
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(OBJDIR)
