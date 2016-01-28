@@ -1,13 +1,13 @@
 // C/C++ includes
-#include <iostream> 
-#include <fstream> 
+#include <iostream>
+#include <fstream>
 
 #ifdef USE_YEPPP
 #include <yepMath.h>
 #include <yepLibrary.h>
 #endif
 
-using namespace std; 
+using namespace std;
 
 // Application includes
 #include "AliParser.hh"
@@ -46,7 +46,7 @@ int main(int argc,char *argv[])
   usage += argv[0];
   usage += " -pe   file1.bam ... -qual val(20) -over val(0.8) [-f file]\n";
   usage += "\n";
-  usage += "Valid genomes (-genome option) are: NCBI36, hg18, GRCh37, hg19\n";
+  usage += "Valid genomes (-genome option) are: NCBI36, hg18, GRCh37, hg19, mm9\n";
 
   if (argc < 2) {
     cerr<<"Not enough parameters."<<endl;
@@ -281,7 +281,7 @@ int main(int argc,char *argv[])
     }
     if (option == OPT_PE) { // pe
       HisMaker maker("null",genome);
-      if (call_file.length() > 0) 
+      if (call_file.length() > 0)
 	maker.pe_for_file(call_file,data_files,n_files,over,qual);
       else {
 	TApplication theApp("App",0,0);
