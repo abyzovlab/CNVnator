@@ -48,7 +48,7 @@ print '##INFO=<ID=SAMPLES,Number=.,Type=String,Description="Sample genotyped to 
 print '##ALT=<ID=DEL,Description="Deletion">',"\n";
 print '##ALT=<ID=DUP,Description="Duplication">',"\n";
 print '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">';
-print '##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">'
+print '##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">';
 print '##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired-ends that support the event">';
 print "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t$pop_id\n";
 my ($prev_chrom,$chrom_seq,$count) = ("","",0);
@@ -101,29 +101,34 @@ while (my $line = <FILE>) {
     if (defined($pe) && ($pe ne "")) { $INFO .= ";natorPE=".$pe; }
     print $INFO;
 
-    my $GT="";
+    my $GT="GT:CN";
+
     if(defined($rd) && ($rd ne "")) {
-	$GT="GT:CN";
 	if(defined($pe)) {
 	    $GT.=":PE";
 	}
+	$GT.="\t";
 
 	if ($isDel && $rd <0.20) {
 	    $GT.="1/1:0";	   
-	} elsif (isDel && $rd >= 0.20) {
+	} elsif ($isDel && $rd >= 0.20) {
 	    $GT.="0/1:1";
-	} elsif (isDup && $rd <= 1.7) {
+	} elsif ($isDup && $rd <= 1.7) {
 	    $GT.="0/1:2";
-	} elsif (isDup && $rd >1.7) {
-	    $GT.="1/1:2"; # CN Copy number of segment containing breakend
+	} elsif ($isDup && $rd >1.7) {
+	    $GT.="1/1:2"; # w/o other data, we can't really say if this is
+	                  # a hom dup, or het dup with higher copy number.
+	} else {
+	    $GT.="./.";
 	}
 
 	if(defined($pe)) {
 	    $GT.=":$pe";
 	}
-	print "$GT\n";
+    } else {
+	$GT.="\t./.";
     }
-
+    print "$GT\n";
 }
 close(FILE);
 
