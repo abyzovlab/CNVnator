@@ -101,10 +101,11 @@ while (my $line = <FILE>) {
     if (defined($pe) && ($pe ne "")) { $INFO .= ";natorPE=".$pe; }
     print $INFO;
 
-    my $GT="GT:CN";
+    my $GT="GT";
 
-    if(defined($rd) && ($rd ne "")) {
-	if(defined($pe)) {
+    if(defined($rd) && ($rd ne "")) {	
+	$GT.=":CN";
+	if(defined($pe) && ($pe ne "")) {
 	    $GT.=":PE";
 	}
 	$GT.="\t";
@@ -119,16 +120,16 @@ while (my $line = <FILE>) {
 	    $GT.="1/1:2"; # w/o other data, we can't really say if this is
 	                  # a hom dup, or het dup with higher copy number.
 	} else {
-	    $GT.="./.";
+	    $GT="GT\t./.";
 	}
 
-	if(defined($pe)) {
+	if(defined($pe) && ($pe ne "")) {
 	    $GT.=":$pe";
 	}
     } else {
 	$GT.="\t./.";
     }
-    print "$GT\n";
+    print "\t$GT\n";
 }
 close(FILE);
 
