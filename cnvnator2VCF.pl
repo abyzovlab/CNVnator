@@ -47,9 +47,9 @@ print '##INFO=<ID=natorPE,Number=1,Type=Integer,Description="Number of paired-en
 print '##INFO=<ID=SAMPLES,Number=.,Type=String,Description="Sample genotyped to have the variant">',"\n";
 print '##ALT=<ID=DEL,Description="Deletion">',"\n";
 print '##ALT=<ID=DUP,Description="Duplication">',"\n";
-print '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">';
-print '##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">';
-print '##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired-ends that support the event">';
+print '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',"\n";
+print '##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">',"\n";
+print '##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired-ends that support the event">',"\n";
 print "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t$pop_id\n";
 my ($prev_chrom,$chrom_seq,$count) = ("","",0);
 while (my $line = <FILE>) {
@@ -117,7 +117,8 @@ while (my $line = <FILE>) {
 	} elsif ($isDup && $rd <= 1.7) {
 	    $GT.="0/1:2";
 	} elsif ($isDup && $rd >1.7) {
-	    $GT.="1/1:2"; # w/o other data, we can't really say if this is
+	    my $cn=sprintf("%.0f",$rd);
+	    $GT.="./1:$cn"; # w/o other data, we can't really say if this is
 	                  # a hom dup, or het dup with higher copy number.
 	} else {
 	    $GT="GT\t./.";
