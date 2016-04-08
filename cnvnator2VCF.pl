@@ -29,7 +29,7 @@ if (length($file) <= 0) {
 open(FILE,$file) or die "Can't open file ",$file,".\n";
 print STDERR "Reading calls ...\n";
 my ($pop_id) = split(/\./,$file);
-print '##fileformat=VCFv4.0',"\n";
+print '##fileformat=VCFv4.1',"\n";
 print '##fileDate='.`date '+%Y%m%d'`;
 print '##reference=1000GenomesPhase3_decoy-GRCh37',"\n";
 print '##source=CNVnator',"\n";
@@ -47,7 +47,10 @@ print '##INFO=<ID=natorPE,Number=1,Type=Integer,Description="Number of paired-en
 print '##INFO=<ID=SAMPLES,Number=.,Type=String,Description="Sample genotyped to have the variant">',"\n";
 print '##ALT=<ID=DEL,Description="Deletion">',"\n";
 print '##ALT=<ID=DUP,Description="Duplication">',"\n";
-print "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n";
+print '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',"\n";
+print '##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">',"\n";
+print '##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired-ends that support the event">',"\n";
+print "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t$pop_id\n";
 my ($prev_chrom,$chrom_seq,$count) = ("","",0);
 while (my $line = <FILE>) {
     my ($type,$coor,$len,$rd,$p1,$p2,$p3,$p4,$q0,$pe) = split(/\s+/,$line);
@@ -96,7 +99,38 @@ while (my $line = <FILE>) {
     if (defined($p4) && ($p4 ne "")) { $INFO .= ";natorP4=".$p4; }
     if (defined($q0) && ($q0 ne "")) { $INFO .= ";natorQ0=".$q0; }
     if (defined($pe) && ($pe ne "")) { $INFO .= ";natorPE=".$pe; }
-    print $INFO."\n";
+    print $INFO;
+
+    my $GT="GT";
+
+    if(defined($rd) && ($rd ne "")) {	
+	$GT.=":CN";
+	if(defined($pe) && ($pe ne "")) {
+	    $GT.=":PE";
+	}
+	$GT.="\t";
+
+	if ($isDel && $rd <0.20) {
+	    $GT.="1/1:0";	   
+	} elsif ($isDel && $rd >= 0.20) {
+	    $GT.="0/1:1";
+	} elsif ($isDup && $rd <= 1.7) {
+	    $GT.="0/1:2";
+	} elsif ($isDup && $rd >1.7) {
+	    my $cn=sprintf("%.0f",$rd);
+	    $GT.="./1:$cn"; # w/o other data, we can't really say if this is
+	                  # a hom dup, or het dup with higher copy number.
+	} else {
+	    $GT="GT\t./.";
+	}
+
+	if(defined($pe) && ($pe ne "")) {
+	    $GT.=":$pe";
+	}
+    } else {
+	$GT.="\t./.";
+    }
+    print "\t$GT\n";
 }
 close(FILE);
 
