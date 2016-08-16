@@ -16,7 +16,8 @@ AliParser::AliParser(string fileName,bool loadIndex) : sam(false),
   int len = fileName.length();
   if (len == 0) {
     stdin = true;
-  } else if (fileName.substr(len - 3,3) == "bam") {
+  } else if (fileName.substr(len - 3,3) == "bam" ||
+             fileName.substr(len - 4,4) == "cram") {
     //cout<<"Assuming BAM file for "<<fileName<<endl;
     file = samopen(fileName.c_str(),"rb",NULL);
     if (!file) cerr<<"Can't open file '"<<fileName<<"'."<<endl;
