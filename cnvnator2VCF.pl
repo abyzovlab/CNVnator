@@ -7,6 +7,7 @@ use Getopt::Long;
 my $usage = "\tcnvnator2VCF.pl [-prefix prefix] file.calls [genome_dir]\n";
 
 my ($file,$dir,$prefix);
+die("not enough argyments. $usage\n") unless ( @ARGV );
 GetOptions( 'p|prefix:s' => \$prefix);
 $file = shift @ARGV;
 if( @ARGV ) {
@@ -15,7 +16,7 @@ if( @ARGV ) {
     $dir = "./";
 }
 
-if (! defined $file) {
+if (! defined $file || ! -f $file ) {
     print STDERR $usage,"\n";
     exit;
 }
