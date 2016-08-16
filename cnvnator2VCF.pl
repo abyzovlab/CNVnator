@@ -2,26 +2,21 @@
 
 use warnings;
 use strict;
+use Getopt::Long;
 
 my $usage = "\tcnvnator2VCF.pl [-prefix prefix] file.calls [genome_dir]\n";
 
-my ($file,$dir,$prefix) = ("","","");
-my $n_arg = scalar(@ARGV);
-foreach (my $i = 0;$i < $n_arg;$i++) {
-    my $arg = $ARGV[$i];
-    if ($arg eq "-prefix") {
-	if ($i + 1 < $n_arg) { $prefix = $ARGV[++$i]; }
-	else                 { die "Not enough arguments.\n"; }
-    }
-    if    (length($file) <= 0) { $file = $arg; }
-    elsif (length($dir)  <= 0) { $dir  = $arg; }
-    else {
-	print STDERR "Too many arguments.\n";
-	last;
-    }
+my ($file,$dir,$prefix);
+die("not enough argyments. $usage\n") unless ( @ARGV );
+GetOptions( 'p|prefix:s' => \$prefix);
+$file = shift @ARGV;
+if( @ARGV ) {
+    $dir = shift @ARGV;
+} else {
+    $dir = "./";
 }
 
-if (length($file) <= 0) {
+if (! defined $file || ! -f $file ) {
     print STDERR $usage,"\n";
     exit;
 }
@@ -69,7 +64,7 @@ while (my $line = <FILE>) {
     }
     $count++;
     my $id = "";
-    if (length($prefix) > 0) { $id = $prefix."_"; }
+    if ( defined $prefix ) { $id = $prefix."_"; }
     $id .= "CNVnator_";
     if    ($isDel) { $id .= "del_"; }
     elsif ($isDup) { $id .= "dup_"; }
