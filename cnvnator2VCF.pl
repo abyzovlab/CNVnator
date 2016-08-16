@@ -9,7 +9,11 @@ my $usage = "\tcnvnator2VCF.pl [-prefix prefix] file.calls [genome_dir]\n";
 my ($file,$dir,$prefix);
 GetOptions( 'p|prefix:s' => \$prefix);
 $file = shift @ARGV;
-$dir = shift @ARGV if @ARGV; 
+if( @ARGV ) {
+    $dir = shift @ARGV;
+} else {
+    $dir = "./";
+}
 
 if (! defined $file) {
     print STDERR $usage,"\n";
@@ -59,7 +63,7 @@ while (my $line = <FILE>) {
     }
     $count++;
     my $id = "";
-    if (length($prefix) > 0) { $id = $prefix."_"; }
+    if ( defined $prefix ) { $id = $prefix."_"; }
     $id .= "CNVnator_";
     if    ($isDel) { $id .= "del_"; }
     elsif ($isDup) { $id .= "dup_"; }
