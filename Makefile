@@ -1,4 +1,4 @@
-VERSION	       = v0.3.2
+VERSION	       = v0.3.3
 override LIBS += -lz
 
 ifneq ($(wildcard $(ROOTSYS)/lib/root),)
