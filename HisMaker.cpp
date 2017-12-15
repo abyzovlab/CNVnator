@@ -11,7 +11,7 @@
 #endif
 
 static const int N_CHROM_MAX = 20000;
-//static const int N_CHROM_MAX = 100000;
+//static const int N_CHROM_MAX = 50000;
 
 double my_gaus(double *x_arr,double *par)
 {
@@ -79,29 +79,10 @@ HisMaker::HisMaker(string rootFile,int binSize,bool useGCcorr,
   dir_name = getDirName(bin_size);
   
   // Statistics on RD
-  rd_u_name        = "rd_u_";        rd_u_name        += binSize;
-  rd_u_xy_name     = "rd_u_xy_";     rd_u_xy_name     += binSize;
-  //rd_p_name        = "rd_p_";        rd_p_name        += binSize;
-  //rd_p_xy_name     = "rd_p_xy_";     rd_p_xy_name     += binSize;
-  //rd_p_GC_name     = "rd_p_GC_";     rd_p_GC_name     += binSize;
-  //rd_p_xy_GC_name  = "rd_p_xy_GC_";  rd_p_xy_GC_name  += binSize;
   rd_gc_name       = "rd_gc_";       rd_gc_name       += binSize;
   rd_gc_xy_name    = "rd_gc_xy_";    rd_gc_xy_name    += binSize;
   rd_gc_GC_name    = "rd_gc_GC_";    rd_gc_GC_name    += binSize;
   rd_gc_xy_GC_name = "rd_gc_xy_GC_"; rd_gc_xy_GC_name += binSize;
-  
-  // Correlation of read depth and GC-content
-  int n_bins = 100;
-  if (binSize < n_bins) n_bins = binSize;
-  double width = 100./n_bins, width2 = width/2;
-  rd_gc       = new TH2D(rd_gc_name,     "GC vs RD correlation",
-			 n_bins + 1,-width2,100 + width2,5001,-0.5,5000.5);
-  rd_gc_xy    = new TH2D(rd_gc_xy_name,  "GC vs RD correlation",
-			 n_bins + 1,-width2,100 + width2,5001,-0.5,5000.5);
-  rd_gc_GC    = new TH2D(rd_gc_GC_name,  "GC vs RD correlation (corrected)",
-			 n_bins + 1,-width2,100 + width2,5001,-0.5,5000.5);
-  rd_gc_xy_GC = new TH2D(rd_gc_xy_GC_name,"GC vs RD correlation (corrected)",
-			 n_bins + 1,-width2,100 + width2,5001,-0.5,5000.5);
   
   // Statistics on partitioning
   TString suff = "";
@@ -354,6 +335,8 @@ void HisMaker::view(string *files,int n_files,bool useATcorr,bool useGCcorr)
       TString obj_class,class_fun,args;
       sin>>obj_class>>class_fun>>args;
       executeROOT(obj_class,class_fun,args);
+    } else if (tmp == "gview") {
+      generateView(useATcorr,useGCcorr);
     } else if (parseInput(input,chrom,start,end,option)) {
       if (option == "genotype") {
 	for (int i = 0;i < n_files;i++) {
@@ -361,6 +344,9 @@ void HisMaker::view(string *files,int n_files,bool useATcorr,bool useGCcorr)
 	  gen.printGenotype(chrom.Data(),
 			    start.Atoi(),end.Atoi(),useATcorr,useGCcorr);
 	}
+      } else if (option == "print") {
+	int s = start.Atoi(), e = end.Atoi();
+	printRegion(chrom,s,e,useATcorr,useGCcorr);
       } else {
 	int s = start.Atoi(), e = end.Atoi();
 	if (option.IsDigit())
@@ -378,6 +364,7 @@ void HisMaker::view(string *files,int n_files,bool useATcorr,bool useGCcorr)
   }
 
   delete timer;
+  delete canv_view;
   exit(0);
 }
 
@@ -401,6 +388,136 @@ void HisMaker::executeROOT(TString obj_class,TString class_fun,TString args)
   }
   if (canv_view->ClassName() == obj_class) canv_view->Execute(class_fun,args);
   canv_view->cd();
+  canv_view->Update();
+}
+
+void HisMaker::printRegion(TString chrom,int start,int end,
+			   bool useATcorr,bool useGCcorr)
+{
+  TString alt_chr               = Genome::canonicalChromName(chrom.Data());
+  if (alt_chr == chrom) alt_chr = Genome::extendedChromName(chrom.Data());
+  TString name           = getRawSignalName(chrom,bin_size);
+  TString alt_name       = getRawSignalName(alt_chr,bin_size);
+  TString name_his       = getSignalName(chrom,bin_size,false,false);
+  TString alt_name_his   = getSignalName(alt_chr,bin_size,false,false);
+  TString name_corr      = getSignalName(chrom,bin_size,useATcorr,useGCcorr);
+  TString alt_name_corr  = getSignalName(alt_chr,bin_size,useATcorr,useGCcorr);
+  TString name_partition = getPartitionName(chrom,bin_size,
+					    useATcorr,useGCcorr);
+  TString alt_name_part  = getPartitionName(alt_chr,bin_size,
+					    useATcorr,useGCcorr);
+  TString name_merge     = name_partition + "_merge";
+  TString alt_name_merge = alt_name_part  + "_merge";
+  TString dir = getDirName(bin_size);
+  TH1 *raw    = getHistogram(root_file_name,dir,name,          alt_name);
+  TH1 *his    = getHistogram(root_file_name,dir,name_his,      alt_name_his);
+  TH1 *hisc   = getHistogram(root_file_name,dir,name_corr,     alt_name_corr);
+  TH1 *hisp   = getHistogram(root_file_name,dir,name_partition,alt_name_part);
+  TH1 *hism   = getHistogram(root_file_name,dir,name_merge,    alt_name_merge);
+  TH1 *his_gc = getHistogram(getGCName(chrom,bin_size));
+  if (!his_gc) his_gc = getHistogram(getGCName(alt_chr,bin_size));
+  if (his)
+    for (int i = 1;i <= his->GetNbinsX();i++) {
+      int s = his->GetBinLowEdge(i);
+      int e = s + his->GetBinWidth(i);
+      if ((s >= start || e >= start) && (e <= end || s <= end)) {
+	cout<<s<<"\t";
+	if (his)  cout<<his->GetBinContent(i);  else cout<<-1;
+	cout<<"\t";
+	if (hisc) cout<<hisc->GetBinContent(i); else cout<<-1;
+	cout<<"\t";
+	if (hisp) cout<<hisp->GetBinContent(i); else cout<<-1;
+	cout<<"\t";
+	if (hism) cout<<hism->GetBinContent(i); else cout<<-1;
+	cout<<"\t";
+	if (his_gc) cout<<his_gc->GetBinContent(i); else cout<<-1;
+	cout<<endl;
+      }
+    }
+  return;
+}
+
+void HisMaker::generateView(bool useATcorr,bool useGCcorr) // Global view
+{
+  if (canv_view) {
+    delete canv_view;
+    canv_view = NULL;
+  }
+  if (!canv_view) {
+    TStyle *st = new TStyle("st","st");
+    st->SetOptStat(false);  // No box with statistics
+    st->SetOptTitle(false); // No box with title
+    gROOT->SetStyle("st"); 
+    canv_view = new TCanvas("canv","canv",900,600);
+    canv_view->SetFillColor(kWhite);
+    canv_view->SetBorderMode(0); // No borders
+  }
+  canv_view->Divide(6,4);
+
+  double mean,sigma;
+  TH1 *rd_his = getHistogram(getDistrName("chr1",bin_size,
+					  useATcorr,useGCcorr));
+  getMeanSigma(rd_his,mean,sigma);
+
+  TString chroms[24] = {"chr1","chr2","chr3","chr4","chr5","chr6","chr7",
+			"chr8","chr9","chr10","chr11","chr12","chr13","chr14",
+			"chr15","chr16","chr17","chr18","chr19","chr20",
+			"chr21","chr22","chrX","chrY"};
+  
+  for (int i = 0;i < 24;i++) {
+    TString chrom     = chroms[i];
+    TString file_name = root_file_name;
+    TString alt_chr               = Genome::canonicalChromName(chrom.Data());
+    if (alt_chr == chrom) alt_chr = Genome::extendedChromName(chrom.Data());
+    TString name           = getRawSignalName(chrom,bin_size);
+    TString alt_name       = getRawSignalName(alt_chr,bin_size);
+    TString name_his       = getSignalName(chrom,bin_size,false,false);
+    TString alt_name_his   = getSignalName(alt_chr,bin_size,false,false);
+    TString name_corr      = getSignalName(chrom,bin_size,useATcorr,useGCcorr);
+    TString alt_name_corr  = getSignalName(alt_chr,bin_size,useATcorr,useGCcorr);
+    TString name_partition = getPartitionName(chrom,bin_size,
+					      useATcorr,useGCcorr);
+    TString alt_name_part  = getPartitionName(alt_chr,bin_size,
+					      useATcorr,useGCcorr);
+    TString name_merge     = name_partition + "_merge";
+    TString alt_name_merge = alt_name_part  + "_merge";
+    TString dir = getDirName(bin_size);
+    TH1 *raw    = getHistogram(file_name,dir,name,          alt_name);
+    TH1 *his    = getHistogram(file_name,dir,name_his,      alt_name_his);
+    TH1 *hisc   = getHistogram(file_name,dir,name_corr,     alt_name_corr);
+    TH1 *hisp   = getHistogram(file_name,dir,name_partition,alt_name_part);
+    TH1 *hism   = getHistogram(file_name,dir,name_merge,    alt_name_merge);
+    TVirtualPad *pad = canv_view->cd(i + 1);
+    pad->SetFillColor(kWhite);
+    pad->SetLineColor(kWhite);
+    pad->SetFrameLineColor(kWhite);
+    pad->SetFrameBorderMode(0);
+    TString title = file_name; title.ReplaceAll(".root","");
+
+    drawHistograms(chrom,0,250e+6,0,title,pad,raw,his,hisc,hisp,hism);
+    if (hisc) {
+      hisc->GetYaxis()->SetRangeUser(0,2*mean);
+      hisc->SetLineWidth(1);
+    }
+    if (raw)  raw->SetLineWidth(1);
+    if (his)  his->SetLineWidth(1);
+    if (hisc) hisc->SetLineWidth(1);
+    if (hisp) hisp->SetLineWidth(1);
+    if (hism) hism->SetLineWidth(1);
+
+    if (!his || !hisc || !hisp || !hism) {
+      cout<<"For file '"<<file_name<<"'."<<endl;
+      if (!his) 
+	cout<<"Can't find RD histogram for '"<<chrom<<"'."<<endl;
+      else if (!hisc)
+	cout<<"Can't find corrected RD histogram for '"<<chrom<<"'."<<endl;
+      else if (!hisp)
+	cout<<"Can't find partitioning histogram for '"<<chrom<<"'."<<endl;
+      else if (!hism)
+	cout<<"Can't find merging histogram for '"<<chrom<<"'."<<endl;
+    }
+  }
+  canv_view->cd(0);
   canv_view->Update();
 }
 
@@ -753,9 +870,9 @@ void HisMaker::drawHistograms(TString chrom,int start,int end,
     hisc->SetLineColor(kBlack);
   }
   if (hisp) {
-//     hisp->Draw("same");
-//     hisp->SetLineColor(kRed);
-//     hisp->SetLineWidth(3);
+    hisp->Draw("same");
+    hisp->SetLineColor(kRed);
+    hisp->SetLineWidth(3);
   }
   if (hism) {
     hism->Draw("same hist");
@@ -853,7 +970,7 @@ double HisMaker::gaussianEValue(double mean,double sigma,double *rd,
 }
 
 void HisMaker::callSVs(string *user_chroms,int n_chroms,
-		       bool useATcorr,bool useGCcorr,bool relax)
+		       bool useATcorr,bool useGCcorr,double delta)
 {
   string chr_names[N_CHROM_MAX] = {""};
   if (user_chroms == NULL && n_chroms != 0) {
@@ -869,7 +986,7 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
       cerr<<"Can't find any histograms."<<endl;
       return;
     }
-    callSVs(chr_names,n_chroms,useATcorr,useGCcorr,relax);
+    callSVs(chr_names,n_chroms,useATcorr,useGCcorr,delta);
     return;
   }
 
@@ -906,21 +1023,17 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
       flags[b] = ' ';
     }
 
-    double cut = mean/4;
+    double cut = mean*delta;
     if (rd_his_global) {
       double mean_global,sigma_global;
       getMeanSigma(rd_his_global,mean_global,sigma_global);
       if (mean < 0.66*mean_global) { // For male individuals
 	cerr<<"Assuming male individual!"<<endl;
-	cut = mean/2;
+	cut = 2*cut;
       }
     }
-    if (relax) cut /= 2;
 
     while (mergeLevels(level,n_bins,cut)) ;
-
-  //     for (int b = 0;b < n_bins;b++)
-  //       merge->SetBinContent(b + 1,level[b]);
 
     // Initial region identification
     double min = mean - cut;
@@ -942,7 +1055,8 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
     
     // Merging with short regions
     int n_add = 1;
-    while (n_add > 0) {
+    //while (n_add > 0) {
+    while (delta < 0.25 && n_add > 0) { // Temporary for developing the usage of AIB
       for (int b = 0;b < n_bins;b++) {
 	
 	if (flags[b] != ' ') continue;
@@ -1087,7 +1201,9 @@ void HisMaker::getMeanSigma(TH1 *his,double &mean,double &sigma)
   sigma = his->GetRMS();
   if (his->GetEntries() == 0) return;
 
-  TF1 *fg = new TF1("my_gaus",my_gaus,0,5000,3);
+  int nbins  = his->GetNbinsX();
+  double edge = his->GetBinLowEdge(nbins) + his->GetBinWidth(nbins);
+  TF1 *fg = new TF1("my_gaus",my_gaus,0,edge,3);
   double constant = his->GetEntries()*0.4/sigma;
   fg->SetParameters(constant,mean,0.5*sigma);
   fg->SetParLimits(1,0,3*mean);
@@ -1153,6 +1269,164 @@ int HisMaker::getChromNamesWithHis(string *names,bool useATcorr,bool useGCcorr)
   return ret;
 }
 
+void HisMaker::partition2D(string *user_chroms,int n_chroms,
+			   bool skipMasked,bool useATcorr,bool useGCcorr,
+			   bool exome,int range)
+{
+  string chr_names[N_CHROM_MAX] = {""};
+  if (user_chroms == NULL && n_chroms != 0) {
+    cerr<<"No chromosome names given."<<endl
+	<<"Aborting partitioning."<<endl;
+    return;
+  }
+
+  if (n_chroms == 0 || (n_chroms == 1 && user_chroms[0] == "")) {
+    n_chroms = getChromNamesWithHis(chr_names,useATcorr,useGCcorr);
+    if (n_chroms < 0) return;
+    if (n_chroms == 0) {
+      cerr<<"Can't find any histograms."<<endl;
+      return;
+    }
+    partition2D(chr_names,n_chroms,skipMasked,useATcorr,useGCcorr,exome,range);
+    return;
+  }
+
+  for (int c = 0;c < n_chroms;c++) {
+    string chrom   = user_chroms[c];
+    string name    = chrom;
+    TH1 *his_rd    = getHistogram(getSignalName(name,bin_size,
+					      useATcorr,useGCcorr));
+    TH1 *his_aib   = getHistogram(getAIBName(name,bin_size));
+    TH1 *rd_distr  = getHistogram(getDistrName(name,bin_size,
+					    useATcorr,useGCcorr));
+
+    if (!his_rd || !his_aib || !rd_distr) {
+      cerr<<"Can't find all histograms for '"<<chrom<<"'."<<endl;
+      return;
+    }
+    
+    cout<<"Partitioning RD signal for '"<<chrom
+	<<"' with bin size of "<<bin_size<<" ..."<<endl;
+
+    double mean,sigma;
+    getMeanSigma(rd_distr,mean,sigma);
+    cout<<"Average RD per bin is "<<mean<<" +- "<<sigma<<endl;
+    
+    int n_bins = his_rd->GetNbinsX();
+    
+    TString hname = his_rd->GetName();
+    TH1 *hl1 = (TH1*)his_rd->Clone(hname + "_l1");
+    TH1 *hl2 = (TH1*)his_rd->Clone(hname + "_l2");
+    TH1 *hl3 = (TH1*)his_rd->Clone(hname + "_l3");
+    TH1 *partition =
+      (TH1*)his_rd->Clone(getPartitionName(name,bin_size,useATcorr,useGCcorr));
+
+    double *rd        = new double[n_bins];
+    double *aib       = new double[n_bins];
+    double *level_rd  = new double[n_bins];
+    double *isig_rd   = new double[n_bins];
+    double *level_aib = new double[n_bins];
+    double *isig_aib  = new double[n_bins];
+    double mean_4 = mean/4, sigma_2 = 4/(sigma*sigma),ms2 = mean/(sigma*sigma);
+    bool   *mask  = new bool[n_bins];
+    for (int b = 0;b < n_bins;b++) {
+      mask[b] = false;
+      rd[b]   = his_rd->GetBinContent(b + 1);
+      aib[b]  = his_aib->GetBinContent(b + 1);
+      isig_rd[b] = isig_aib[b] = -1;
+      double err_rd  = his_rd->GetBinError(b + 1);
+      double err_aib = his_aib->GetBinError(b + 1);
+      if (err_rd  > 0) isig_rd[b]  = 1/(err_rd*err_rd);
+      if (err_aib > 0) isig_aib[b] = 1/(err_aib*err_aib);
+    }
+    
+    for (int bin_band = 2;bin_band <= range;bin_band++) {
+      
+      cout<<"Bin band is "<<bin_band<<endl;
+
+      for (int b = 0;b < n_bins;b++) 
+	if (!mask[b]) {
+	  level_rd[b]  = rd[b];
+	  level_aib[b] = aib[b];
+	}
+
+      if (!exome)
+	for (int b = 0;b < n_bins;b++)
+	  if (!mask[b])
+	    isig_rd[b] = (level_rd[b] < mean_4) ? sigma_2 : ms2/level_rd[b];
+      calcLevels(level_rd,isig_rd,mask,n_bins,bin_band,skipMasked,
+		 level_aib,isig_aib);
+      for (int b = 0;b < n_bins;b++) hl1->SetBinContent(b + 1,level_rd[b]);
+      
+      if (!exome)
+	for (int b = 0;b < n_bins;b++)
+	  if (!mask[b])
+	    isig_rd[b] = (level_rd[b] < mean_4)? sigma_2: ms2/level_rd[b];
+      calcLevels(level_rd,isig_rd,mask,n_bins,bin_band,skipMasked,
+		 level_aib,isig_aib);
+      for (int b = 0;b < n_bins;b++) hl2->SetBinContent(b + 1,level_rd[b]);
+      
+      if (!exome)
+	for (int b = 0;b < n_bins;b++)
+	  if (!mask[b])
+	    isig_rd[b] = (level_rd[b] < mean_4) ? sigma_2 : ms2/level_rd[b];
+      calcLevels(level_rd,isig_rd,mask,n_bins,bin_band,skipMasked,
+		 level_aib,isig_aib);
+      for (int b = 0;b < n_bins;b++) hl3->SetBinContent(b + 1,level_rd[b]);
+      
+      if (skipMasked) {
+	updateMask_skip(rd,level_rd,mask,n_bins,mean,sigma);
+      } else {
+	updateMask(rd,level_rd,mask,n_bins,mean,sigma);
+      }
+      
+      if (bin_band >=   8) bin_band +=  1;
+      if (bin_band >=  16) bin_band +=  2;
+      if (bin_band >=  32) bin_band +=  4;
+      if (bin_band >=  64) bin_band +=  8;
+      if (bin_band >= 128) bin_band += 16;
+      if (bin_band >= 256) bin_band += 32;
+      if (bin_band >= 512) bin_band += 64;
+    }
+    
+    for (int b = 0;b < n_bins;b++) partition->SetBinContent(b + 1,level_rd[b]);
+    double prev = level_rd[0],prev_delta = 0;
+    int count = 1;
+    for (int b = 1;b < n_bins;b++) {
+      if (TMath::Abs(level_rd[b] - prev) < PRECISION) { count++; }
+      else {
+	rd_level->Fill(prev);
+	frag_len->Fill(count);
+	double delta = prev - level_rd[b];
+	dl->Fill(TMath::Abs(delta));
+	dl2->Fill(prev_delta,delta);
+	prev = level_rd[b];
+	prev_delta = delta;
+	count = 1;
+      }
+    }
+    
+    delete[] rd;
+    delete[] aib;
+    delete[] level_rd;
+    delete[] isig_rd;
+    delete[] level_aib;
+    delete[] isig_aib;
+    delete[] mask;
+
+    // Chromosome specific
+    writeHistogramsToBinDir(partition,hl1,hl2,hl3);
+    delete hl1;
+    delete hl2;
+    delete hl3;
+    delete partition;
+
+    // General statistics
+    // If many chromosomes are analyzed then sum of all will be written last
+    writeHistogramsToBinDir(rd_level,frag_len,dl,dl2);
+  }
+}
+
 void HisMaker::partition(string *user_chroms,int n_chroms,
 			 bool skipMasked,bool useATcorr,bool useGCcorr,
 			 bool exome,int range)
@@ -1180,9 +1454,9 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
     string name  = chrom;
     TH1 *his     = getHistogram(getSignalName(name,bin_size,
 					      useATcorr,useGCcorr));
-    TH1 *rd_his = getHistogram(getDistrName(name,bin_size,
+    TH1 *rd_distr = getHistogram(getDistrName(name,bin_size,
 					    useATcorr,useGCcorr));
-    if (!his || !rd_his) {
+    if (!his || !rd_distr) {
       cerr<<"Can't find all histograms for '"<<chrom<<"'."<<endl;
       return;
     }
@@ -1191,7 +1465,7 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
 	<<"' with bin size of "<<bin_size<<" ..."<<endl;
 
     double mean,sigma;
-    getMeanSigma(rd_his,mean,sigma);
+    getMeanSigma(rd_distr,mean,sigma);
     cout<<"Average RD per bin is "<<mean<<" +- "<<sigma<<endl;
     
     int n_bins = his->GetNbinsX();
@@ -1532,47 +1806,69 @@ void HisMaker::updateMask_skip(double *rd,double *level,bool *mask,int n_bins,
   }
 }
 
-void calcLevelsInner(const double* level,const double *inv,const bool* mask,
-		     int n_bins,int bin_band,double* grad_b) {
+void calcLevelsInner(const double* lev_rd,const double *inv_rd,
+		     const bool* mask,int n_bins,int bin_band,double* grad_b,
+		     const double *lev_aib = NULL,const double *inv_aib = NULL)
+{
+  bool use_aib = lev_aib && inv_aib;
+  
   std::vector<int>    nonMaskedIndices;
-  std::vector<double> nonMaskedLevels;
-  std::vector<double> nonMaskedInvs;
+  std::vector<double> nonMaskedLevs_rd, nonMaskedLevs_aib;
+  std::vector<double> nonMaskedInvs_rd, nonMaskedInvs_aib;
   nonMaskedIndices.reserve(n_bins);
-  nonMaskedLevels.reserve(n_bins);
-  nonMaskedInvs.reserve(n_bins);
+  nonMaskedLevs_rd.reserve(n_bins);
+  nonMaskedInvs_rd.reserve(n_bins);
+  if (use_aib) {
+    nonMaskedLevs_aib.reserve(n_bins);
+    nonMaskedInvs_aib.reserve(n_bins);
+  }
 
   double inv2_bin_band = 1./(bin_band*bin_band);
   int    win = 3*bin_band;
-  double * exps = new double[2 * win + 1];
+  double *exps = new double[2 * win + 1];
 
   for (int b = 0; b < n_bins; b++) {
-    if (!mask[b]) {
-      nonMaskedIndices.push_back(b);
-      nonMaskedLevels.push_back(level[b]);
-      nonMaskedInvs.push_back(inv[b]);
-    } 
+    if (mask[b]) continue;
+    nonMaskedIndices.push_back(b);
+    nonMaskedLevs_rd.push_back(lev_rd[b]);
+    nonMaskedInvs_rd.push_back(inv_rd[b]);
+    if (use_aib) {
+      nonMaskedLevs_aib.push_back(lev_aib[b]);
+      nonMaskedInvs_aib.push_back(inv_aib[b]);
+    }
   }
 
   for (int i = -win;i <= win;i++)
-    exps[i + win] = i * exp(-0.5*i*i*inv2_bin_band);
+    exps[i + win] = i*exp(-0.5*i*i*inv2_bin_band);
 
-  double * window, * window_next;
-  #pragma omp parallel private(window, window_next)
+
+  double *window_rd, *window_aib;
+  #pragma omp parallel private(window_rd, window_aib)
   {
-    window = new double[2 * (2 * win + 1)];
-    window_next = &window[2 * win + 1];
+    window_rd    = new double[2*(2*win + 1)];
+    if (use_aib)
+      window_aib = new double[2*(2*win + 1)];
 
     #pragma omp for schedule(static, 32)
     for (int bb = 0; bb < nonMaskedIndices.size(); bb++) {
       int b = nonMaskedIndices[bb];
-      double level_b = nonMaskedLevels[bb];
+      double lev_rd_b = nonMaskedLevs_rd[bb];
       double grad_b_b = grad_b[b];
       int left = std::max(0, bb - win);
       int right = std::min((int)nonMaskedIndices.size() - 1, bb + win);
       for (int ii = left; ii <= right; ii++) {
-        double r = nonMaskedLevels[ii] - level_b;
+        double r   = nonMaskedLevs_rd[ii] - lev_rd_b;
         double val = -0.5*r*r;
-        window[ii - bb + win] = val * nonMaskedInvs[bb];
+        window_rd[ii - bb + win] = val*nonMaskedInvs_rd[bb];
+	if (use_aib) {
+	  window_aib[ii - bb + win] = 0;
+	  if (nonMaskedInvs_aib[bb] >= 0 &&
+	      nonMaskedInvs_aib[ii] >= 0) { // Negative value means undefined
+	    r   = nonMaskedLevs_aib[ii] - nonMaskedLevs_aib[bb];
+	    val = -0.5*r*r;
+	    window_aib[ii - bb + win] = val*TMath::Sqrt(nonMaskedInvs_aib[bb]*nonMaskedInvs_aib[bb] + nonMaskedInvs_aib[ii]*nonMaskedInvs_aib[ii]);
+	  }
+	}
       }
 #ifdef USE_YEPPP
       yepMath_Exp_V64f_V64f(window + left - bb + win, window_next + left - bb + win, right - left + 1);
@@ -1581,26 +1877,33 @@ void calcLevelsInner(const double* level,const double *inv,const bool* mask,
       grad_b_b += dot_product;
 #else
       for (int ii = left; ii <= right; ii++) {
-        grad_b_b += exps[ii - bb + win] * exp(window[ii - bb + win]);
+        double to_add = exps[ii - bb + win]*exp(window_rd[ii - bb + win]);
+	if (use_aib) to_add *= exp(window_aib[ii - bb + win]);
+	grad_b_b += to_add;
       }
 #endif
       grad_b[b] = grad_b_b;
     }
 
-    delete [] window;
+    delete [] window_rd;
+    if (use_aib)
+      delete [] window_aib;
   }
 
   delete [] exps;
 }
 
-void HisMaker::calcLevels(double *level,double *isig,bool *mask,int n_bins,
-			  int bin_band,bool skipMasked)
+void HisMaker::calcLevels(double *level1,double *isig1,
+			  bool *mask,int n_bins,
+			  int bin_band,bool skipMasked,
+			  double *level2,double *isig2)
 {
   double *grad_b = new double[n_bins];
   memset(grad_b,0,n_bins*sizeof(double));
 
   // Calculating levels
-  calcLevelsInner(level,isig,mask,n_bins,bin_band,grad_b); 
+  calcLevelsInner(level1,isig1,mask,n_bins,bin_band,grad_b,
+		  level2,isig2);
 
   for (int b = 0;b < n_bins;b++) {
     if (mask[b]) continue;
@@ -1626,7 +1929,7 @@ void HisMaker::calcLevels(double *level,double *isig,bool *mask,int n_bins,
     int n = 0;
     for (int i = b_start;i <= b_stop;i++) {
       if (mask[i]) continue;
-      nl += level[i];
+      nl += level1[i];
       n++;
     }
     if (n <= 0) {
@@ -1635,7 +1938,7 @@ void HisMaker::calcLevels(double *level,double *isig,bool *mask,int n_bins,
     }
     nl *= getInverse(n);
     for (int i = b_start;i <= b_stop;i++) 
-      if (!mask[i]) level[i] = nl;
+      if (!mask[i]) level1[i] = nl;
   }
 
   delete[] grad_b;
@@ -2022,13 +2325,24 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
     }
   }
 
+  int nb_rd = 251, nb_gc = 101;
+  double max_rd = estimateDepthMaximum(user_chroms,n_chroms), max_gc = 100.5;
+  max_rd = (int(max_rd/(nb_rd - 1)) + 1)*(nb_rd - 1) + 0.5;
+
   // Statistics for uncorrected
   TH1* rd_p    = new TH1D(getDistrName(Genome::CHRALL,bin_size,false,false),
-			  "RD all",   5001,-0.5,5000.5);
+  			  "RD distribution (1-22)",nb_rd,-0.5,max_rd);
   TH1* rd_p_xy = new TH1D(getDistrName(Genome::CHRSEX,bin_size,false,false),
-			  "RD all XY",5001,-0.5,5000.5);
-  TH1 *rd_u       = new TH1D(rd_u_name,   "RD unique",   5001,-0.5,5000.5);
-  TH1 *rd_u_xy    = new TH1D(rd_u_xy_name,"RD unique XY",5001,-0.5,5000.5);
+  			  "RD distribution (X&Y)", nb_rd,-0.5,max_rd);
+  TH1 *rd_u    = new TH1D(getUDistrName(Genome::CHRALL,bin_size),
+			  "RD unique distribution (1-22)",nb_rd,-0.5,max_rd);
+  TH1 *rd_u_xy = new TH1D(getUDistrName(Genome::CHRSEX,bin_size),
+			  "RD unique distribution (X&Y)", nb_rd,-0.5,max_rd);
+  TH2 *rd_gc    = new TH2D(rd_gc_name,   "GC vs RD correlation",
+			 101,-0.5,100.5,nb_rd,-0.5,max_rd);
+  TH2 *rd_gc_xy = new TH2D(rd_gc_xy_name,"GC vs RD correlation for XY",
+			 101,-0.5,100.5,nb_rd,-0.5,max_rd);
+
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
     string name  = chrom;
@@ -2113,9 +2427,17 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
 
   // Statistics for corrected counts
   TH1* rd_p_GC    = new TH1D(getDistrName(Genome::CHRALL,bin_size,useATcorr,true),
-			     "RD all (GC corrected)",   5001,-0.5,5000.5);
+  			     "RD all (GC corrected)",   nb_rd,-0.5,max_rd);
   TH1* rd_p_xy_GC = new TH1D(getDistrName(Genome::CHRSEX,bin_size,useATcorr,true),
-			     "RD all XY (GC corrected)",5001,-0.5,5000.5);
+  			     "RD all XY (GC corrected)",nb_rd,-0.5,max_rd);
+  TH2* rd_gc_GC    = new TH2D(rd_gc_GC_name,
+			      "GC vs RD correlation (corrected)",
+			      101,-0.5,100.5,nb_rd,-0.5,max_rd);
+  TH2* rd_gc_xy_GC = new TH2D(rd_gc_xy_GC_name,
+			      "GC vs RD correlation for XY (corrected)",
+			      101,-0.5,100.5,nb_rd,-0.5,max_rd);
+
+
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
     string name  = chrom;
@@ -2181,6 +2503,26 @@ void HisMaker::eval(string *files,int n_files,bool useATcorr,bool useGCcorr)
 	  <<mean/sigma<<endl;
     }
   }
+}
+
+double HisMaker::estimateDepthMaximum(string *user_chroms,int n_chroms)
+{
+  double average = 0;
+  int    count  = 0;
+  for (int c = 0;c < n_chroms;c++) {
+    string name  = user_chroms[c];
+    TH1 *his_p  = getHistogram(getSignalName(name,bin_size,false,false));
+    if (!his_p) continue;
+    for (int b = 1;b <= his_p->GetNbinsX();b++)
+      average += his_p->GetBinContent(b), count++;
+  }
+  double ret = 0;
+  if (count <= 0) return ret;
+  average /= count;
+  if (2*average > ret) ret = int(2*average + 0.5) + 0.5;
+  average += 10*TMath::Sqrt(average);
+  if (average   > ret) ret = int(average + 0.5) + 0.5;
+  return ret;
 }
 
 int HisMaker::countGCpercentage(char *seq,int low,int up)
@@ -2500,7 +2842,7 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
       tree->SetBranchAddress("rd_parity",&rd_parity);
       int start = 1, end = bin_size, bin = 0;
       int n_ent = tree->GetEntries(), index = 0;
-      short count_unique = 0,count_parity = 0;
+      int count_unique = 0,count_parity = 0;
       tree->GetEntry(index++);
       while (index < n_ent) {
 	
@@ -2615,10 +2957,10 @@ void HisMaker::produceHistograms_try_correct(string *user_chroms,int n_chroms)
   double half_bin    = 50./MAX_N;
   TH2 *his_test      = new TH2D("new_rd_gc","GC vs RD correlation",
 				MAX_N + 1,-half_bin,MAX_N + half_bin,
-				5001,-0.5,5000.5);
+				50001,-0.5,50000.5);
   TH1* rd_p          = new TH1D(getDistrName(Genome::CHRALL,bin_size,
 					     false,false),
-				"RD all",   5001,-0.5,5000.5);
+				"RD all",   50001,-0.5,50000.5);
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
     string name  = chrom;
@@ -3551,6 +3893,14 @@ TString HisMaker::getDistrName(string chr,int bin,
   return ret;
 }
 
+TString HisMaker::getUDistrName(string chr,int bin)
+{
+  TString ret = "rd_u_";
+  if (Genome::isSexChrom(chr)) ret += "xy_";
+  ret += bin;
+  return ret;
+}
+
 TString HisMaker::getRawSignalName(TString chr,int bin)
 {
   TString ret = getSignalName(chr,bin,false,false);
@@ -3566,6 +3916,13 @@ TString HisMaker::getSignalName(TString chr,int bin,
   ret += bin;
   if (useATcorr) ret += "_AT";
   if (useGCcorr) ret += "_GC";
+  return ret;
+
+}
+TString HisMaker::getAIBName(TString chr,int bin)
+{
+  TString ret = "his_aib_" + chr + "_";
+  ret += bin;
   return ret;
 }
 

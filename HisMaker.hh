@@ -52,9 +52,6 @@ private:
   double inv_bin_size;    // Invert bin_size
   TString root_file_name; // Name of root file with data
   TString dir_name;       // Directory in the root file
-  TH1 *rd_u,*rd_u_xy,*rd_p,*rd_p_xy; // Stats on RD
-  TH1 *rd_p_GC,*rd_p_xy_GC; // Stats on RD after GC correction
-  TH2 *rd_gc,*rd_gc_xy,*rd_gc_GC,*rd_gc_xy_GC;
   TH1 *rd_level,*rd_level_merge,*frag_len,*dl,*dl2; // Stats on partitioning
   int chromosome_len;
   bool useMappability;
@@ -102,9 +99,6 @@ public:
 
   // Histogram naming
 private:
-  TString rd_u_name,rd_u_xy_name;
-  TString rd_p_name,rd_p_xy_name;
-  TString rd_p_GC_name,rd_p_xy_GC_name;
   TString rd_gc_name,rd_gc_xy_name;
   TString rd_gc_GC_name,rd_gc_xy_GC_name;
 
@@ -112,11 +106,13 @@ public:
   void    setDataDir(string dir) { dir_ = dir; }
   TString getDirName(int bin);
   TString getDistrName(string chr,int bin,bool useATcoor,bool useGCcorr);
+  TString getUDistrName(string chr,int bin);
   TString getRawSignalName(TString chr,int bin);
   TString getSignalName(TString chr,int bin,bool useATcoor,bool useGCcorr);
+  TString getUSignalName(TString chrom,int bin);
+  TString getAIBName(TString chr,int bin);
   TString getPartitionName(TString chr,int bin,bool useATcorr,bool useGCcorr);
   TString getGCName(TString chrom,int bin);
-  TString getUSignalName(TString chrom,int bin);
   TString getATaggrName() { return "his_at_aggr"; }
   int     readChromosome(string chrom,char *seq,int max_len);
   int     parseGCandAT(char *seq,int len,int **address,TH1 *his = NULL);
@@ -140,12 +136,16 @@ public:
   void partition(string *user_chroms,int n_chroms,
 		 bool skipMasked,bool useATcorr,bool useGCcorr,
 		 bool exome = false,int range = 128);
+  void partition2D(string *user_chroms,int n_chroms,
+		   bool skipMasked,bool useATcorr,bool useGCcorr,
+		   bool exome = false,int range = 128);
   void callSVs(string *user_chroms,int n_chroms,bool useATcorr,bool useGCcorr,
-	       bool relax);
+	       double delta);
   void pe(string *bamss,int n_files,double over,double qual);
   void pe_for_file(string file,
 		   string *bams,int n_files,double over,double qual);
 private:
+  double estimateDepthMaximum(string *user_chroms,int n_chroms);
   int  extract_pe(TString input,
 		  string *bams,int n_bams,double over,double qual,
 		  bool do_print = true,int *ses = NULL);
@@ -159,8 +159,9 @@ private:
 		   double mean,double sigma);
   void updateMask_skip(double *rd,double *level,bool *mask,int n_bins,
 		       double mean,double sigma);
-  void calcLevels(double *level,double *isig,bool *mask,int n_bins,
-		  int bin_band,bool skipMasked);
+  void calcLevels(double *level1,double *isig1,bool *mask,int n_bins,
+		  int bin_band,bool skipMasked,
+		  double *level2 = NULL,double *isig2 = NULL);
   bool mergeLevels(double *level,int n_bins,double delta);
 
 public: // Viewing and genotyping
@@ -169,6 +170,9 @@ public: // Viewing and genotyping
 
 private:
   void executeROOT(TString obj_class,TString class_fun,TString args);
+  void printRegion(TString chrom,int start,int end,
+		   bool useATcorr,bool useGCcorr);
+  void generateView(bool useATcorr,bool useGCcorr);
   void generateView(TString chrom,int start,int end,
 		    bool useATcorr,bool useGCcorr,
 		    string *files = NULL,int win = -1);

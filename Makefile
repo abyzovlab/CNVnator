@@ -37,6 +37,7 @@ ifneq ($(YEPPPINCLUDEDIR),)
 endif
 
 CXX    = g++ -O3 -std=c++11 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
+#CXX    = g++ -O3 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
 
 OBJDIR = obj
 OBJS   = $(OBJDIR)/cnvnator.o  \

@@ -77,9 +77,10 @@ int main(int argc,char *argv[])
   static const int OPT_PANEL      = 0x01000;
   static const int OPT_FIT        = 0x02000;
 
-  static const int OPT_SPARTITION = 0x04000;
-  static const int OPT_HIS_NEW    = 0x08000;
-  static const int OPT_AGGREGATE  = 0x10000;
+  static const int OPT_SPARTITION  = 0x04000;
+  static const int OPT_PARTITION2D = 0x08000;
+  static const int OPT_HIS_NEW     = 0x10000;
+  static const int OPT_AGGREGATE   = 0x20000;
 
   // tree, merge, his, stat, partition, spartition, call, view, genotype
   int max_opts = 10000, n_opts = 0, opts[max_opts], bins[max_opts], gbin = 0;
@@ -90,6 +91,7 @@ int main(int argc,char *argv[])
   string chroms[1000],data_files[100000],root_files[100000] = {""},dir = ".";
   int n_chroms = 0,n_files = 0,n_root_files = 0,range = 128, qual = 20;
   double over = 0.8;
+  double deltaAF = 0.25;
   Genome *genome = NULL;
 
   int index = 1;
@@ -101,12 +103,12 @@ int main(int argc,char *argv[])
       if (option == "-pe")    opts[n_opts++] = OPT_PE;
       while (index < argc && argv[index][0] != '-')
 	if (strlen(argv[index++]) > 0) data_files[n_files++] = argv[index - 1];
-    } else if (option == "-his"        || option == "-his_new"    ||
+    } else if (option == "-his"        || option == "-his_new"     ||
 	       option == "-hismerge"   ||
-	       option == "-stat"       || option == "-eval"       ||
-	       option == "-partition"  || option == "-spartition" ||
-	       option == "-epartition" ||
-	       option == "-call"       || option == "-view"       ||
+	       option == "-stat"       || option == "-eval"        ||
+	       option == "-partition"  || option == "-partition2D" ||
+	       option == "-epartition" || option == "-spartition"  ||
+	       option == "-call"       || option == "-view"        ||
 	       option == "-genotype"   || option == "-aggregate") {
       int bs = 0;
       if (index < argc && argv[index][0] != '-') {
@@ -118,18 +120,19 @@ int main(int argc,char *argv[])
 	}
 	bs = tmp.Atoi();
       }
-      if (option == "-his")        opts[n_opts] = OPT_HIS;
-      if (option == "-hismerge")   opts[n_opts] = OPT_HISMERGE;
-      if (option == "-stat")       opts[n_opts] = OPT_STAT;
-      if (option == "-partition")  opts[n_opts] = OPT_PARTITION;
-      if (option == "-epartition") opts[n_opts] = OPT_EPARTITION;
-      if (option == "-spartition") opts[n_opts] = OPT_SPARTITION;
-      if (option == "-call")       opts[n_opts] = OPT_CALL;
-      if (option == "-view")       opts[n_opts] = OPT_VIEW;
-      if (option == "-genotype")   opts[n_opts] = OPT_GENOTYPE;
-      if (option == "-his_new")    opts[n_opts] = OPT_HIS_NEW;
-      if (option == "-eval")       opts[n_opts] = OPT_EVAL;
-      if (option == "-aggregate")  opts[n_opts] = OPT_AGGREGATE;
+      if (option == "-his")         opts[n_opts] = OPT_HIS;
+      if (option == "-hismerge")    opts[n_opts] = OPT_HISMERGE;
+      if (option == "-stat")        opts[n_opts] = OPT_STAT;
+      if (option == "-partition")   opts[n_opts] = OPT_PARTITION;
+      if (option == "-partition2D") opts[n_opts] = OPT_PARTITION2D;
+      if (option == "-epartition")  opts[n_opts] = OPT_EPARTITION;
+      if (option == "-spartition")  opts[n_opts] = OPT_SPARTITION;
+      if (option == "-call")        opts[n_opts] = OPT_CALL;
+      if (option == "-view")        opts[n_opts] = OPT_VIEW;
+      if (option == "-genotype")    opts[n_opts] = OPT_GENOTYPE;
+      if (option == "-his_new")     opts[n_opts] = OPT_HIS_NEW;
+      if (option == "-eval")        opts[n_opts] = OPT_EVAL;
+      if (option == "-aggregate")   opts[n_opts] = OPT_AGGREGATE;
       bins[n_opts++] = bs;
     } else if (option == "-panel") {
       opts[n_opts++] = OPT_PANEL;
@@ -218,6 +221,19 @@ int main(int argc,char *argv[])
       range = atoi(argv[index++]);
     } else if (option == "-relax") {
       relaxCalling = true;
+    } else if (option == "-deltaAF") {
+      if (index >= argc || argv[index][0] == '-') {
+	cerr<<"No delta value is provided."<<endl;
+	cerr<<usage<<endl;
+	return 0;
+      }
+      TString tmp = argv[index++];
+      if (!tmp.IsFloat()) {
+	cerr<<"Quality value must be real number."<<endl;
+	cerr<<usage<<endl;
+	return 0;
+      }
+      deltaAF = tmp.Atof();
     } else if (option[0] == '-') {
       cerr<<"Unknown option '"<<option<<"'.\n"<<endl;
     }
@@ -255,13 +271,17 @@ int main(int argc,char *argv[])
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
       maker.partition(chroms,n_chroms,false,useATcorr,useGCcorr,false,range);
     }
+    if (option == OPT_PARTITION2D) { // partition
+      HisMaker maker(out_root_file,bin,useGCcorr,genome);
+      maker.partition2D(chroms,n_chroms,false,useATcorr,useGCcorr,false,range);
+    }
     if (option == OPT_EPARTITION) { // exome partition
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
       maker.partition(chroms,n_chroms,false,useATcorr,useGCcorr,true,range);
     }
     if (option == OPT_CALL) { // call
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
-      maker.callSVs(chroms,n_chroms,useATcorr,useGCcorr,relaxCalling);
+      maker.callSVs(chroms,n_chroms,useATcorr,useGCcorr,deltaAF);
     }
     if (option == OPT_VIEW) { // view
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
