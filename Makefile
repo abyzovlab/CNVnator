@@ -1,5 +1,5 @@
 VERSION	       = v0.3.3
-override LIBS += -lz
+override LIBS += -lz -lbz2 -lcurl -llzma
 
 ifneq ($(wildcard $(ROOTSYS)/lib/root),)
         ROOTLIBS = -L$(ROOTSYS)/lib/root -lCore -lRIO -lHist -lGraf -lGpad -lTree -lMathCore
@@ -57,7 +57,7 @@ SRCDIR	     = $(MAINDIR)/src
 all: cnvnator
 
 cnvnator: $(OBJS)
-	$(CXX) -o $@ $(OBJS) $(SAMLIB) $(LIBS) $(ROOTLIBS) -lbz2 -lcurl -llzma
+	$(CXX) -o $@ $(OBJS) $(SAMLIB) $(LIBS) $(ROOTLIBS)
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(OBJDIR)
