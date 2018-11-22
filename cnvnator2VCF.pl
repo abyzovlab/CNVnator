@@ -26,7 +26,7 @@ print STDERR "Reading calls ...\n";
 my ($pop_id) = split(/\./,$file);
 print '##fileformat=VCFv4.1',"\n";
 print '##fileDate='.`date '+%Y%m%d'`;
-print '##reference=1000GenomesPhase3_decoy-GRCh37',"\n";
+print '##reference=myReferenceGenome.fa',"\n";
 print '##source=CNVnator',"\n";
 print '##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">',"\n";
 print '##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">',"\n";
