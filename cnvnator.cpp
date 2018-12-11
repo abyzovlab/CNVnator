@@ -24,7 +24,7 @@ int main(int argc,char *argv[])
 #endif
   usage += "\n\nUsage:\n";
   usage += argv[0];
-  usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -tree  file1.bam ...\n";
+  usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -tree  file1.bam ... [-lite]\n";
   usage += argv[0];
   usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -merge file1.root ...\n";
   usage += argv[0];
@@ -86,7 +86,7 @@ int main(int argc,char *argv[])
   int max_opts = 10000, n_opts = 0, opts[max_opts], bins[max_opts], gbin = 0;
   for (int i = 0;i < n_opts;i++) bins[i] = 0;
   bool useGCcorr = true,useATcorr = false;
-  bool forUnique = false,relaxCalling = false;
+  bool lite = false,relaxCalling = false;
   string out_root_file(""),call_file(""),group_name("");
   string chroms[1000],data_files[100000],root_files[100000] = {""},dir = ".";
   int n_chroms = 0,n_files = 0,n_root_files = 0,range = 128, qual = 20;
@@ -215,8 +215,8 @@ int main(int argc,char *argv[])
 	return 0;
       }
       call_file = argv[index++];
-    } else if (option == "-unique") {
-      forUnique = true;
+    } else if (option == "-lite") {
+      lite = true;
     } else if (option == "-range") {
       range = atoi(argv[index++]);
     } else if (option == "-relax") {
@@ -249,7 +249,7 @@ int main(int argc,char *argv[])
     if (option == OPT_TREE) { // tree
       HisMaker maker(out_root_file,genome);
       maker.setDataDir(dir);
-      maker.produceTrees(chroms,n_chroms,data_files,n_files,forUnique);
+      maker.produceTrees(chroms,n_chroms,data_files,n_files,lite);
     }
     if (option == OPT_MERGE) { // merge
       HisMaker maker(out_root_file,genome);
