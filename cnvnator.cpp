@@ -28,7 +28,7 @@ int main(int argc,char *argv[])
   usage += argv[0];
   usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -merge file1.root ...\n";
   usage += argv[0];
-  usage += " -root file.root [-genome name] [-chrom 1 2 ...] [-d dir] -his bin_size\n";
+  usage += " -root file.root [-genome name] [-chrom 1 2 ...] [-d dir | -fasta file.fa.gz] -his bin_size\n";
   usage += argv[0];
   usage += " -root file.root [-chrom 1 2 ...] -stat      bin_size\n";
   usage += argv[0];
@@ -87,7 +87,7 @@ int main(int argc,char *argv[])
   for (int i = 0;i < n_opts;i++) bins[i] = 0;
   bool useGCcorr = true,useATcorr = false;
   bool lite = false,relaxCalling = false;
-  string out_root_file(""),call_file(""),group_name("");
+  string out_root_file(""),call_file(""),group_name(""),fastafile("");
   string chroms[1000],data_files[100000],root_files[100000] = {""},dir = ".";
   int n_chroms = 0,n_files = 0,n_root_files = 0,range = 128, qual = 20;
   double over = 0.8;
@@ -182,7 +182,11 @@ int main(int argc,char *argv[])
       if (index < argc && argv[index][0] != '-')
 	dir = argv[index++];
       else cerr<<"No directory is given."<<endl;
-    } else if (option == "-qual") {
+    } else if (option == "-fasta") {
+      if (index < argc && argv[index][0] != '-')
+  fastafile = argv[index++];
+      else cerr<<"Fasta file is not given."<<endl;
+    }else if (option == "-qual") {
       if (index >= argc || argv[index][0] == '-') {
 	cerr<<"No quality value is provided."<<endl;
 	cerr<<usage<<endl;
@@ -258,10 +262,15 @@ int main(int argc,char *argv[])
     if (option == OPT_HIS ||
 	option == OPT_HISMERGE) { // his
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
-      maker.setDataDir(dir);
-      maker.produceHistograms(chroms,n_chroms,root_files,n_root_files,false);
-      if (option == OPT_HISMERGE)
-	maker.produceHistograms(chroms,n_chroms,root_files,n_root_files,true);
+      if(fastafile!="") {
+        maker.setFastaFile(fastafile);
+        maker.produceHistogramsFa(chroms,n_chroms,root_files,n_root_files,false);
+        if (option == OPT_HISMERGE)  maker.produceHistogramsFa(chroms,n_chroms,root_files,n_root_files,true);
+      } else {
+        maker.setDataDir(dir);
+        maker.produceHistograms(chroms,n_chroms,root_files,n_root_files,false);
+        if (option == OPT_HISMERGE)  maker.produceHistograms(chroms,n_chroms,root_files,n_root_files,true);
+      }
     }
     if (option == OPT_STAT) { // stat
       HisMaker maker(out_root_file,bin,useGCcorr,genome);

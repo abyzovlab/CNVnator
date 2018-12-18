@@ -44,6 +44,7 @@ OBJS   = $(OBJDIR)/cnvnator.o  \
 	 $(OBJDIR)/EXOnator.o  \
 	 $(OBJDIR)/HisMaker.o  \
 	 $(OBJDIR)/AliParser.o \
+	 $(OBJDIR)/FastaParser.o \
 	 $(OBJDIR)/Genotyper.o \
 	 $(OBJDIR)/Interval.o  \
 	 $(OBJDIR)/Genome.o

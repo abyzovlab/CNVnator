@@ -63,6 +63,7 @@ private:
   TCanvas *canv_view; // Canvas for displaying
   Genome *refGenome_;
   string dir_;
+  string fastafile;
 
 public:
   HisMaker(string rootFile,Genome *genome = NULL);
@@ -103,7 +104,8 @@ private:
   TString rd_gc_GC_name,rd_gc_xy_GC_name;
 
 public:
-  void    setDataDir(string dir) { dir_ = dir; }
+  inline void setDataDir(string dir) { dir_ = dir; }
+  inline void setFastaFile(string ff) { fastafile = ff; }
   TString getDirName(int bin);
   TString getDistrName(string chr,int bin,bool useATcoor,bool useGCcorr);
   TString getUDistrName(string chr,int bin);
@@ -127,6 +129,9 @@ public:
   void produceHistograms(string *chrom,int n_chroms,
 			 string *root_files,int n_root_files,
 			 bool useGCcorr = false);
+  void produceHistogramsFa(string *chrom,int n_chroms,
+       string *root_files,int n_root_files,
+       bool useGCcorr = false);
   void produceHistograms_try_correct(string *user_chroms,int n_chroms);
   void produceHistogramsNew(string *user_chroms,int n_chroms);
   void aggregate(string *files,int n_files,string *chrom,int n_chroms);
@@ -200,7 +205,7 @@ private:
   double getMean(TH1 *his);
   bool adjustToEValue(double mean,double sigma,double *rd,int n_bins,
 		      int &start,int &end,double eval);
-  int countGCpercentage(char *seq,int low,int up);
+  int countGCpercentage(const char *seq,int low,int up);
   double gaussianEValue(double mean,double sigma,double *rd,int start,int end);
   int getChromNamesWithHis(string *names,bool useATcorr,bool useGCcorr);
   int getChromNamesWithTree(string *names,string rfn = "");

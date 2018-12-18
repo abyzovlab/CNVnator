@@ -3,6 +3,7 @@
 #include "Genotyper.hh"
 #include "Genome.hh"
 #include "Interval.hh"
+#include "FastaParser.hh"
 
 #ifdef USE_YEPPP
 #include <yepCore.h>
@@ -2525,7 +2526,7 @@ double HisMaker::estimateDepthMaximum(string *user_chroms,int n_chroms)
   return ret;
 }
 
-int HisMaker::countGCpercentage(char *seq,int low,int up)
+int HisMaker::countGCpercentage(const char *seq,int low,int up)
 {
   if (low > up) return -100;
   int n_a = 0, n_t = 0, n_g = 0, n_c = 0;
@@ -2791,7 +2792,7 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
   for (int c = 0;c < n_chroms;c++) {
     string chrom = user_chroms[c];
     cout<<"Calculating histograms with bin size of "<<bin_size<<" for '"
-	<<chrom<<"' ..."<<endl;
+	  <<chrom<<"' ..."<<endl;
     string name = chrom;
     int org_len = chrom_lens[c];
     if (org_len <= 0) continue;
@@ -2905,6 +2906,156 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
   }
 
   delete[] seq_buffer;
+}
+
+void HisMaker::produceHistogramsFa(string *user_chroms,int n_chroms,
+         string *root_files,int n_root_files,
+         bool useGCcorr)
+{
+  if (user_chroms == NULL && n_chroms != 0) {
+    cerr<<"No chromosome names given."<<endl
+  <<"Aborting making histogram."<<endl;
+    return;
+  }
+
+  if (n_root_files < 1) return;
+
+  string chrom_names[N_CHROM_MAX];
+  int    chrom_lens[N_CHROM_MAX];
+  if (n_chroms == 0 || (n_chroms == 1 && user_chroms[0] == "")) {
+    n_chroms = getChromNamesWithTree(chrom_names,root_files[0]);
+    user_chroms = chrom_names;
+  }
+
+  cout<<"Allocating memory ..."<<endl;
+  int max = 0;
+  for (int c = 0;c < n_chroms;c++) {
+    int len = getChromLenWithTree(user_chroms[c],root_files[0]);
+    if (len > max) max = len;
+    chrom_lens[c] = len;
+  }
+  cout<<"Done."<<endl;
+
+  FastaParser faparser(fastafile);
+  while (faparser.nextChromosome()) {
+    int c=0;
+    for(;(user_chroms[c]!=faparser.getName())&&(Genome::extendedChromName(user_chroms[c])!=faparser.getName())&&(user_chroms[c]!=Genome::extendedChromName(faparser.getName()))&&(c<n_chroms);c++);
+    if(c>=n_chroms) continue;
+    string chrom = user_chroms[c];
+    cout<<"Calculating histograms with bin size of "<<bin_size<<" for '"
+    <<chrom<<"' ..."<<endl;
+    string name = chrom;
+    int org_len = chrom_lens[c];
+    if (org_len <= 0) continue;
+    int n_bins = org_len/bin_size + 1;
+    int len = n_bins*bin_size;
+    TString h_name_u = getUSignalName(name,bin_size);
+    TString h_name_p = getSignalName(name,bin_size,false,useGCcorr);
+    TString h_title_u = "Unique read depth for "; h_title_u += name;
+    TString h_title_p = "Read depth for ";        h_title_p += name;
+    TH1 *his_rd_u = new TH1D(h_name_u,h_title_u,n_bins,0,len);
+    TH1 *his_rd_p = new TH1D(h_name_p,h_title_p,n_bins,0,len);
+    TH1 *his_gc = (TH1*)his_rd_p->Clone(getGCName(name,bin_size));
+    his_rd_u->SetDirectory(0);
+    his_rd_p->SetDirectory(0);
+    
+    for (int f = 0;f < n_root_files;f++) {
+      string rfn = root_files[f];
+      TFile file(rfn.c_str(),"Read");
+      if (file.IsZombie()) {
+  cerr<<"Can't open file '"<<rfn<<"'."<<endl;
+  continue;
+      }
+
+      // Calculating array with average RD for GC
+//       int loc_bin = 1000;
+//       TString loc_dir = getDirName(loc_bin);
+//       TH2 *fh_rd_gc = (TH2*)getHistogram(rfn,loc_dir,"rd_gc_1000");
+//       TH1 *fh_mean  = getHistogram(getDistrName(Genome::CHRALL,loc_bin,false,false),
+//            rfn,loc_dir);
+//       TH1 *fh_gc    = getHistogram(getGCName(name,loc_bin),rfn,loc_dir);
+//       int N = fh_rd_gc->GetNbinsX();
+//       double width = 100./(N - 1),inv_width = 1./width;
+//       double *gc_corr = new double[N];
+//       calcGCcorrection(fh_rd_gc,fh_mean,gc_corr,N);
+
+      TTree *tree = (TTree*)file.Get(chrom.c_str());
+      if (!tree) tree = (TTree*)file.Get(name.c_str());
+      if (!tree) {
+  cerr<<"Can't find tree for chromosome '"<<chrom<<"' in file '"
+      <<rfn<<"'."<<endl;
+  continue;
+      }
+      
+      int position;
+      short rd_unique,rd_parity;
+      tree->SetBranchAddress("position", &position);
+      tree->SetBranchAddress("rd_unique",&rd_unique);
+      tree->SetBranchAddress("rd_parity",&rd_parity);
+      int start = 1, end = bin_size, bin = 0;
+      int n_ent = tree->GetEntries(), index = 0;
+      int count_unique = 0,count_parity = 0;
+      tree->GetEntry(index++);
+      while (index < n_ent) {
+  
+  // Calculate count
+  while (position <= end && index < n_ent) {
+    count_unique += rd_unique;
+    count_parity += rd_parity;
+    tree->GetEntry(index++);
+    if (count_unique < 0) count_unique = 30000;
+    if (count_parity < 0) count_parity = 30000;
+  }
+  
+  bin++;
+  if (bin < 1 || bin > n_bins) {
+    cerr<<"Bin out of bounds."<<endl;
+  } else {
+    double cu = his_rd_u->GetBinContent(bin) + count_unique;
+    double cp = his_rd_u->GetBinContent(bin) + count_parity;
+    his_rd_u->SetBinContent(bin,cu);
+    his_rd_p->SetBinContent(bin,cp);
+    his_rd_u->SetBinError(bin,0);
+    his_rd_p->SetBinError(bin,0);
+  }
+  
+  start += bin_size;
+  end   += bin_size;
+  count_unique   = 0;
+  count_parity   = 0;
+      }
+      delete tree;
+      file.Close();
+    }
+
+    // Writing chromosome specific histograms
+    writeHistogramsToBinDir(his_rd_u,his_rd_p);
+    
+    // Creating histograms with GC-content
+    cout<<"Making GC histogram for '"<<chrom<<"' ..."<<endl;
+    string cseq=faparser.getData();
+    int n_read=cseq.length();
+    if (n_read != org_len)
+      cerr<<"Sequence length ("<<n_read<<") is different from expectation ("
+    <<org_len<<") for '"<<chrom<<"'."<<endl
+    <<"Doing nothing!"<<endl;
+    else {
+      int n = his_gc->GetNbinsX();
+      for (int i = 1;i <= n;i++) {
+  int low = (int) his_gc->GetBinLowEdge(i);
+  int up  = (int) (low + his_gc->GetBinWidth(i));
+  if (up > org_len) up = org_len;
+  his_gc->SetBinContent(i,countGCpercentage(cseq.c_str(),low,up));
+      }
+      writeHistogramsToBinDir(his_gc);
+    }
+    cout<<"Done."<<endl;
+
+    // Deleting objects
+    delete his_rd_u;
+    delete his_rd_p;
+    delete his_gc;
+  }
 }
 
 double getMedian(TH1 *tmp)
