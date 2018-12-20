@@ -1,7 +1,7 @@
 // Application includes
 #include "Genome.hh"
 
-Genome Genome::genomes[NGS] = {Genome("NCBI36"),Genome("GRCh37")};
+Genome Genome::genomes[NGS] = {Genome("NCBI36"),Genome("GRCh37"),Genome("GRCh38")};
 const string Genome::CHRX   = Genome::canonicalChromName("X");
 const string Genome::CHRY   = Genome::canonicalChromName("Y");
 const string Genome::CHRALL = "ALL";
@@ -92,6 +92,34 @@ Genome::Genome(string name) : n_chr_(0)
     cnames_[18] = Genome::canonicalChromName("19"); clens_[18] = 61342430;
     cnames_[19] = Genome::canonicalChromName("X");  clens_[19] = 166650296;
     cnames_[20] = Genome::canonicalChromName("Y");  clens_[20] = 15902555;
+  } else if (name == "hg38" || name == "grch38") {
+    gname_       = "GRCh38";
+    other_gname_ = "hg38";
+    n_chr_      = 24;
+    cnames_[0]  = Genome::canonicalChromName("1");  clens_[0]  = 248956422;
+    cnames_[1]  = Genome::canonicalChromName("2");  clens_[1]  = 242193529;
+    cnames_[2]  = Genome::canonicalChromName("3");  clens_[2]  = 198295559;
+    cnames_[3]  = Genome::canonicalChromName("4");  clens_[3]  = 190214555;
+    cnames_[4]  = Genome::canonicalChromName("5");  clens_[4]  = 181538259;
+    cnames_[5]  = Genome::canonicalChromName("6");  clens_[5]  = 170805979;
+    cnames_[6]  = Genome::canonicalChromName("7");  clens_[6]  = 159345973;
+    cnames_[7]  = Genome::canonicalChromName("8");  clens_[7]  = 145138636;
+    cnames_[8]  = Genome::canonicalChromName("9");  clens_[8]  = 138394717;
+    cnames_[9]  = Genome::canonicalChromName("10"); clens_[9]  = 133797422;
+    cnames_[10] = Genome::canonicalChromName("11"); clens_[10] = 135086622;
+    cnames_[11] = Genome::canonicalChromName("12"); clens_[11] = 133275309;
+    cnames_[12] = Genome::canonicalChromName("13"); clens_[12] = 114364328;
+    cnames_[13] = Genome::canonicalChromName("14"); clens_[13] = 107043718;
+    cnames_[14] = Genome::canonicalChromName("15"); clens_[14] = 101991189;
+    cnames_[15] = Genome::canonicalChromName("16"); clens_[15] = 90338345;
+    cnames_[16] = Genome::canonicalChromName("17"); clens_[16] = 83257441;
+    cnames_[17] = Genome::canonicalChromName("18"); clens_[17] = 80373285;
+    cnames_[18] = Genome::canonicalChromName("19"); clens_[18] = 58617616;
+    cnames_[19] = Genome::canonicalChromName("20"); clens_[19] = 64444167;
+    cnames_[20] = Genome::canonicalChromName("21"); clens_[20] = 46709983;
+    cnames_[21] = Genome::canonicalChromName("22"); clens_[21] = 50818468;
+    cnames_[22] = Genome::canonicalChromName("X");  clens_[22] = 156040895;
+    cnames_[23] = Genome::canonicalChromName("Y");  clens_[23] = 57227415;
   } else {
     cerr<<"Unknown genome '"<<org_name<<"'."<<endl;
   }

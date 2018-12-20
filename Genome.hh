@@ -13,7 +13,7 @@ private:
   Genome(string name);
 
 private:
-  static const int NGS = 2;
+  static const int NGS = 3;
   static Genome genomes[NGS];
   string gname_,other_gname_;
   static const int MAX_N_CHROMS_ = 100;
