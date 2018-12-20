@@ -4,11 +4,13 @@ use warnings;
 use strict;
 use Getopt::Long;
 
-my $usage = "\tcnvnator2VCF.pl [-prefix prefix] file.calls [genome_dir]\n";
+my $usage = "\tcnvnator2VCF.pl [-prefix prefix] [-reference reference_name ] file.calls [genome_dir]\n";
 
-my ($file,$dir,$prefix);
+my ($file,$dir,$prefix,$reference);
 die("not enough argyments. $usage\n") unless ( @ARGV );
-GetOptions( 'p|prefix:s' => \$prefix);
+
+$reference = '1000GenomesPhase3_decoy-GRCh37';
+GetOptions( 'p|prefix:s' => \$prefix,'r|reference:s' => \$reference);
 $file = shift @ARGV;
 if( @ARGV ) {
     $dir = shift @ARGV;
@@ -26,7 +28,7 @@ print STDERR "Reading calls ...\n";
 my ($pop_id) = split(/\./,$file);
 print '##fileformat=VCFv4.1',"\n";
 print '##fileDate='.`date '+%Y%m%d'`;
-print '##reference=myReferenceGenome.fa',"\n";
+print "##reference=$reference","\n";
 print '##source=CNVnator',"\n";
 print '##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">',"\n";
 print '##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">',"\n";
@@ -49,7 +51,8 @@ print "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t$pop_id\n";
 my ($prev_chrom,$chrom_seq,$count) = ("","",0);
 while (my $line = <FILE>) {
     my ($type,$coor,$len,$rd,$p1,$p2,$p3,$p4,$q0,$pe) = split(/\s+/,$line);
-    my ($chrom,$start,$end) = split(/[\:\-]/,$coor);
+    my ($chrom,$start_end) = split(/:/,$coor);
+    my ($start,$end) = split(/-/,$start_end);
     my $isDel = ($type eq "deletion");
     my $isDup = ($type eq "duplication");
     if ($isDup) {

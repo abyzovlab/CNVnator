@@ -448,7 +448,7 @@ void HisMaker::generateView(bool useATcorr,bool useGCcorr) // Global view
     st->SetOptStat(false);  // No box with statistics
     st->SetOptTitle(false); // No box with title
     gROOT->SetStyle("st"); 
-    canv_view = new TCanvas("canv","canv",900,600);
+    canv_view = new TCanvas("canv","canv",1400,850);
     canv_view->SetFillColor(kWhite);
     canv_view->SetBorderMode(0); // No borders
   }
@@ -542,7 +542,7 @@ void HisMaker::generateView(TString chrom,int start,int end,
     st->SetOptStat(false);  // No box with statistics
     st->SetOptTitle(false); // No box with title
     gROOT->SetStyle("st"); 
-    canv_view = new TCanvas("canv","canv",900,600);
+    canv_view = new TCanvas("canv","canv",1400,850);
     canv_view->SetFillColor(kWhite);
     canv_view->SetBorderMode(0); // No borders
     if (n_files == 2)      canv_view->Divide(1,2);
@@ -3559,7 +3559,7 @@ int findIndex(string *arr,int n,string name)
 
 void HisMaker::produceTrees(string *user_chroms,int n_chroms,
 			    string *user_files,int n_files,
-			    bool forUnique)
+			    bool lite)
 {
   string one_string[1] = {""};
   if (user_chroms == NULL) n_chroms = 0;
@@ -3657,7 +3657,7 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
 	counts_p[c] = new short[clens[c] + 1];
 	memset(counts_p[c],0,(clens[c] + 1)*sizeof(short));
       }
-      if (forUnique && !counts_u[c]) {
+      if (!counts_u[c]) {
 	counts_u[c] = new short[clens[c] + 1];
 	memset(counts_u[c],0,(clens[c] + 1)*sizeof(short));
       }
@@ -3696,7 +3696,7 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
 
       // Doing counting
       if (counts_p[chr_ind][mid] + 1 > 0) counts_p[chr_ind][mid]++;
-      if (forUnique && !parser->isQ0())
+      if (!parser->isQ0())
 	if (counts_u[chr_ind][mid] + 1 > 0) counts_u[chr_ind][mid]++;
       n_placed++;
       
@@ -3757,13 +3757,70 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
     if (counts_p[c]) {
       cout<<"Filling and saving tree for '"<<cnames[c]<<"' ..."<<endl;
       short *arru = NULL, *arrp = NULL;
-      if (counts_u[c]) arru = &counts_u[c][1];
       if (counts_p[c]) arrp = &counts_p[c][1];
+      if (counts_u[c]) arru = &counts_u[c][1];
+
+      if (lite) // Aggregating by 100 consequites positions
+	for (int pos = 0;pos < clens[c];pos += 100) {
+	  int i = pos + 1;
+	  while (i < clens[c] && i < pos + 100) {
+	    arrp[pos] += arrp[i];
+	    arru[pos] += arru[i];
+	    arrp[i]    = arru[i] = 0;
+	    i++;
+	  }
+      }
+
       writeTreeForChromosome(cnames[c],arrp,arru,clens[c]);
     }
 
   cout<<"Writing histograms ... "<<endl;
   writeHistograms(his_frg_read,his_at_aggr,his_pair_pos);
+
+//   cout<<"Saving RD counts ..."<<endl;
+//   int n_vals = 9000000;
+//   char  *bin_vals = new char[n_vals];
+//   ofstream bin_file("data.bin",ios::out | ios::binary);
+//   for (int c = 0;c < ncs;c++) {
+//     if (!counts_p[c]) continue;
+//     short *arrp = &counts_p[c][1], *arru = &counts_u[c][1];
+//     int n_save = 0, pos = 0;
+//     for (int i = 100;i < clens[c];i += 100) {
+//       short val_p = 0, val_u = 0;
+//       while (pos < i) {
+//         val_p += arrp[pos];
+//         val_u += arru[pos];
+//         pos++;
+//       }
+//       if (val_p > 4095) val_p = 4095; // max with 12 bits
+//       if (val_u > 4095) val_u = 4095; // max with 12 bits
+//       bin_vals[n_save++] = (val_p >> 4) & 0xff;
+//       bin_vals[n_save++] = ((val_p << 4) & 0xf0) + ((val_u >> 8) & 0x0f);
+//       bin_vals[n_save++] = val_u & 0xff;
+//     }
+//     bin_file.write(bin_vals,n_save);
+//   }
+//   bin_file.close();
+
+  // Reading RD counts
+//   char buffer[100];
+//   ifstream bin_file ("data.bin", ios::in | ios::binary);
+
+//   short val1 = 0, val2 = 0;
+
+//   int n = 0;
+//   while (bin_file.read(buffer,3)) {
+//     n++;
+//     val1 = buffer[0] & 0xff;
+//     val1 <<= 4;
+//     val1 += (buffer[1] & 0xf0) >> 4;
+//     val2 =  buffer[1] & 0x0f;
+//     val2 <<= 8;
+//     val2 += buffer[2] & 0xff;
+//     if (val1 > 10 || val2 > 10)
+//       cout<<val1<<" "<<val2<<endl;
+//   }
+//   cout<<"n = "<<n<<endl;
 
   for (int c = 0;c < ncs;c++) {
     delete[] counts_u[c];

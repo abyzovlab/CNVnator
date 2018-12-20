@@ -121,7 +121,7 @@ public:
 public:
   void produceTrees(string *user_chroms,int n_chroms,
 		    string *user_files,int n_files,
-		    bool forUnique);
+		    bool lite);
   void mergeTrees(string *user_chroms,int n_chroms,
 		  string *user_files,int n_files);
   void produceHistograms(string *chrom,int n_chroms,
