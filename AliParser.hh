@@ -70,6 +70,7 @@ public:
   inline bool isNextUnmapped() { return flag_ & 0x8; }
   inline bool isReversed()     { return flag_ & 0x10; }
   inline bool isNextReversed() { return flag_ & 0x20; }
+  inline bool isSecondary()    { return flag_ & 0x100; }
   inline bool isDuplicate()    { return flag_ & 0x400; }
 
 public:
