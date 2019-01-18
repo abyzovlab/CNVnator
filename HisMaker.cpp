@@ -3795,7 +3795,7 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
       if (counts_u[c]) arru = &counts_u[c][1];
 
       if (lite) // Aggregating by 100 consequites positions
-	for (int pos = 0;pos < clens[c];pos += 100) {
+	for (int pos = 1;pos < clens[c];pos += 100) {
 	  int i = pos + 1;
 	  while (i < clens[c] && i < pos + 100) {
 	    arrp[pos] += arrp[i];
