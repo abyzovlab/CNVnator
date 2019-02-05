@@ -1,24 +1,24 @@
 # README 
 
-## 0. Quick start guide
+## Quick start guide
 
 ```
 # Extract read mapping
 $ ./cnvnator -root file.root -tree file.bam -unique
 
 # Generate histogram
-$ ./cnvnator -root file.root -his       1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y
+$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y
   OR
-$ ./cnvnator -root file.root -his       1000 -chrom chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY
+$ ./cnvnator -root file.root -his 1000 -chrom chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY
 
 # Calculate statistics
-$ ./cnvnator -root file.root -stat      1000 -d dir_with_genome_fa/
+$ ./cnvnator -root file.root -stat 1000 -d dir_with_genome_fa/
 
 # Partition
 $ ./cnvnator -root file.root -partition 1000
 
 # Call CNVs
-$ ./cnvnator -root file.root -call      1000
+$ ./cnvnator -root file.root -call 1000
 ```
 
 ## 1. Compilation
@@ -27,7 +27,7 @@ $ ./cnvnator -root file.root -call      1000
 
 You must install [ROOT package](http://root.cern.ch) and set up `$ROOTSYS` variable (see ROOT documentation [here](https://root.cern.ch/root/html534/guides/users-guide/GettingStarted.html)).
 
-Also, a link to the samtools binary should be present in your CNVnator directory
+Also, a link to the samtools binary should be present in your CNVnator directory.
 
 If compilation is not completed but the file libbam.a has been created, you can continue.
 
@@ -45,7 +45,7 @@ make
 
 If make doesn't work, try `"make OMP=no"` which will disable parallel support.
 
-#### Installing with Yeppp support
+### Installing with Yeppp support
 
 [Yeppp](http://www.yeppp.info/) is a library which provides high-performance implementations of math functions.
 
@@ -55,12 +55,14 @@ and extract it to a location of your choice. Set `YEPPPLIBDIR` and `YEPPPINCLUDE
 Typically, for Linux-based systems on x86-64, `YEPPPLIBDIR` will be yeppp-1.0.0/binaries/linux/x86_64/ and `YEPPPINCLUDEDIR` will be
 yeppp-1.0.0/library/headers. 
 
-To build, type `make YEPPPLIBDIR=... YEPPPINCLUDEDIR=...`  
-To disable OpenMP also add `OMP=no` to the make command.
+To build, type  
+`make YEPPPLIBDIR=... YEPPPINCLUDEDIR=...`  
+
+To disable OpenMP, add `OMP=no` to the make command.
 
 ## 2. Predicting CNV regions
 
-Running CNVnator involves a few steps that are outlined below. Chromosome names and lengths are
+Running CNVnator involves a few steps outlined below. Chromosome names and lengths are
 parsed from the input sam/bam file header. 
 
 ### 2.1 EXTRACTING READ MAPPING FROM BAM/SAM FILES
@@ -68,10 +70,11 @@ parsed from the input sam/bam file header.
 ```
 $ ./cnvnator -root out.root [-chrom name1 ...] -tree [file1.bam ...]
 ```
-where
-out.root  -- output ROOT file. See ROOT package documentation.
-chr_name1 -- chromosome name.
-file.bam  -- bam files.
+where,
+
+out.root  -- output ROOT file. See ROOT package documentation.  
+name1 ... -- chromosome name(s).  
+file1.bam ...  -- bam file(s).  
 
 Chromosome names must be specified the same way as they are described in the sam/bam
 header, e.g., chrX or X. One can specify multiple chromosomes separated by
@@ -87,24 +90,24 @@ Example:
 ./cnvnator -root NA12878.root -chrom 1 2 3  -tree NA12878_ali.bam
 ```
 
-for bam files with a header like this:
-@HD VN:1.4    GO:none  SO:coordinate
-@SQ SN:1      LN:249250621
-@SQ SN:2      LN:243199373
-@SQ SN:3      LN:198022430
-...
+for bam files with a header like this:  
+@HD VN:1.4    GO:none  SO:coordinate  
+@SQ SN:1      LN:249250621  
+@SQ SN:2      LN:243199373  
+@SQ SN:3      LN:198022430  
+...  
 
 or
 
 ```
 ./cnvnator -root NA12878.root -chrom chr1 chr2 chr3 -tree NA12878_ali.bam
 ```
-for bam files with a header like this:
-@HD VN:1.4    GO:none  SO:coordinate
-@SQ SN:chr1   LN:249250621
-@SQ SN:chr2   LN:243199373
-@SQ SN:chr3   LN:198022430
-...
+for bam files with a header like this:  
+@HD VN:1.4    GO:none  SO:coordinate  
+@SQ SN:chr1   LN:249250621  
+@SQ SN:chr2   LN:243199373  
+@SQ SN:chr3   LN:198022430  
+...  
 
 Example:
 
@@ -160,35 +163,35 @@ Calls are printed to STDOUT by default. You may redirect them to a file using th
 
 The output columns are as follows:
 
-CNV\_\type coordinates CNV\_\size normalized\_\RD e-val1 e-val2 e-val3 e-val4 q0
+CNV\_type coordinates CNV\_size normalized\_RD e-val1 e-val2 e-val3 e-val4 q0
 
 where,
 
-normalized_RD -- read depth normalized to 1.
-e-val1        -- is calculated using t-test statistics.
+normalized_RD -- read depth normalized to 1.  
+e-val1        -- is calculated using t-test statistics.  
 e-val2        -- is from the probability of RD values within the region to be in
-the tails of a gaussian distribution describing frequencies of RD values in bins.
-e-val3        -- same as e-val1 but for the middle of CNV
-e-val4        -- same as e-val2 but for the middle of CNV
-q0            -- fraction of reads mapped with q0 quality
+the tails of a gaussian distribution describing frequencies of RD values in bins.  
+e-val3        -- same as e-val1 but for the middle of CNV  
+e-val4        -- same as e-val2 but for the middle of CNV  
+q0            -- fraction of reads mapped with q0 quality  
 
 ### 2.6 MERGING ROOT FILES
 
 ```
-./cnvnator -root out.root [-chrom name ...] -merge file1.root ...
+./cnvnator -root out.root [-chrom name1 ...] -merge file1.root ...
 ```
-Merging can be used when combining read mappings extracted from multiple files.
-Note, histogram generation, statistics calculation, signal partitioning, and
+Merging can be used when combining read mappings extracted from multiple files.  
+Note: histogram generation, statistics calculation, signal partitioning, and
 CNV calling should be completed/redone after merging.
 
 
 ### 2.7 VISUALIZING SPECIFIED REGIONS
 
 ```
-./cnvnator -root file.root [-chrom chr_name1 ...] -view bin_size [-ngc]
+./cnvnator -root file.root [-chrom name1 ...] -view bin_size [-ngc]
 ```
 
-Once prompted enter a genomic region, e.g.,
+Once prompted, enter a genomic region, e.g.,
 
 ```
 >12:11396601-11436500
