@@ -4,6 +4,7 @@
 #include "Genome.hh"
 #include "Interval.hh"
 #include "FastaParser.hh"
+#include "VcfParser.hh"
 
 #ifdef USE_YEPPP
 #include <yepCore.h>
@@ -3609,12 +3610,12 @@ void HisMaker::mergeTrees(string *user_chroms,int n_chroms,
   delete[] counts_p;
 }
 
-int HisMaker::getChromNamesWithTree(string *names,string rfn)
+int HisMaker::getChromNamesWithTree(string *names,string rfn,bool vcf)
 {
   if (!names) return 0;
   if (rfn.length() == 0) rfn = root_file_name;
   TFile file(rfn.c_str(),"Read");
-  if (file.IsZombie()) { 
+  if (file.IsZombie()) {
     cerr<<"Can't open file '"<<root_file_name<<"'."<<endl;
     return 0;
   }
@@ -3628,16 +3629,25 @@ int HisMaker::getChromNamesWithTree(string *names,string rfn)
       cerr<<"Tree with no name is ignored."<<endl;
       continue;
     }
-    if (ret >= N_CHROM_MAX) {
-      cerr<<"Too many trees in the file '"<<root_file_name<<"'."<<endl
-	  <<"Tree '"<<chrom<<"' is ignored."<<endl;
+    string vcfstr="vcf_";
+    if (!vcf && (chrom.compare(0,vcfstr.size(),vcfstr)==0)) {
       continue;
     }
-    names[ret++] = chrom;
+    if (vcf && (chrom.compare(0,vcfstr.size(),vcfstr)!=0)) {
+      continue;
+    }
+    if (ret >= N_CHROM_MAX) {
+      cerr<<"Too many trees in the file '"<<root_file_name<<"'."<<endl
+      <<"Tree '"<<chrom<<"' is ignored."<<endl;
+      continue;
+    }
+    if(vcf) names[ret++] = chrom.substr(vcfstr.size());
+    else names[ret++] = chrom;
   }
   file.Close();
   return ret;
 }
+
 
 int HisMaker::getChromLenWithTree(string chrom,string rfn)
 {
@@ -3980,6 +3990,349 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
   }
 
   cout<<"Total of "<<n_placed<<" reads were placed."<<endl;
+}
+
+void HisMaker::addVcf(string *user_chroms,int n_chroms,string *user_files,int n_files,bool rmchr,bool addchr)
+{
+  string one_string[1] = {""};
+  if (user_chroms == NULL) n_chroms = 0;
+  if (user_files  == NULL || n_files == 0) {
+    n_files    = 1;
+    user_files = one_string;
+  }
+  std::vector<int>  vcf_position;
+  std::vector<char> vcf_ref;
+  std::vector<char> vcf_alt;
+  std::vector<short> vcf_qual;
+  std::vector<short> vcf_nref;
+  std::vector<short> vcf_nalt;
+  std::vector<short> vcf_gt;
+  std::vector<short> vcf_flag;
+  long n_placed = 0;
+  if (user_files[0].length() > 0)
+    cout<<"Parsing file "<<user_files[0]<<" ..."<<endl;
+  else
+    cout<<"Parsing stdin ..."<<endl;
+  VcfParser *parser = new VcfParser(user_files[0]);
+  string prev_chr("");
+  while (parser->parseRecord()) if(parser->getFilter()=="PASS") {
+    string chr=parser->getChromosome();
+    if(addchr) chr=Genome::extendedChromName(chr);
+    if(rmchr) chr=Genome::canonicalChromName(chr);
+    if (n_chroms > 0 && findIndex(user_chroms,n_chroms,chr) < 0) continue;
+    if(chr!=prev_chr) {
+      if(!vcf_position.empty()) writeTreeForVcf(prev_chr,vcf_position,vcf_ref,vcf_alt,vcf_qual,vcf_nref,vcf_nalt,vcf_gt,vcf_flag);
+      vcf_position.clear();
+      vcf_ref.clear();
+      vcf_alt.clear();
+      vcf_qual.clear();
+      vcf_nref.clear();
+      vcf_nalt.clear();
+      vcf_gt.clear();
+      vcf_flag.clear();
+    }
+    int pos=parser->getPosition();
+    string tref=parser->getRef();
+    string talt=parser->getAlt();
+    if(tref.length()!=1 && tref.length()!=2) {
+      continue;
+    }
+    if(talt.length()!=1 && talt.length()!=2) {
+      continue;
+    }
+    if(tref.length()==2 && talt.length()==2) {
+      continue;
+    }
+    vcf_position.push_back(pos);
+    char ttref=tref[0];
+    char ttalt=talt[0];
+    if(tref.length()==2) {
+      ttref=tref[1];
+      ttalt='-';
+    }
+    if(talt.length()==2) {
+      ttalt=talt[1];
+      ttref='-';
+    }
+    vcf_ref.push_back(ttref);
+    vcf_alt.push_back(ttalt);
+    vcf_qual.push_back(static_cast<short>(parser->getQual()));
+    vcf_nref.push_back(parser->getNRef());
+    vcf_nalt.push_back(parser->getNAlt());
+    string tgt=parser->getGT();
+    short tgts=0;
+    
+    if(tgt[0]=='1') tgts+=2;
+    if(tgt[2]=='1') tgts+=1;
+    if(tgt[1]=='|') tgts+=4;
+    vcf_gt.push_back(tgts);
+    vcf_flag.push_back(0);
+    n_placed++;
+    prev_chr=chr;
+  }
+  if(!vcf_position.empty()) writeTreeForVcf(prev_chr,vcf_position,vcf_ref,vcf_alt,vcf_qual,vcf_nref,vcf_nalt,vcf_gt,vcf_flag);
+  delete parser;
+  
+  cout<<"Total of " <<n_placed<< " SNPs were placed."<<endl;
+}
+
+void HisMaker::writeTreeForVcf(string chr,std::vector<int> &vcf_position,std::vector<char> &vcf_ref,
+                               std::vector<char> &vcf_alt, std::vector<short> &vcf_qual, std::vector<short> &vcf_nref,
+                               std::vector<short> &vcf_nalt, std::vector<short> &vcf_gt, std::vector<short> &vcf_flag) {
+
+  cout<<"Filling and saving tree for '"<< chr <<"' ..."<<endl;
+  
+  TFile file(root_file_name.Data(),"Update");
+  if (file.IsZombie()) {
+    cerr<<"Can't open/write to file '"<<root_file_name<<"'."<<endl;
+    return;
+  }
+  stringstream sd,sn;
+  sn<<"vcf_"<<chr;
+  sd<<"vcf_"<<chr<<';'<<vcf_position.size();
+  int _position;
+  char _ref[2]="",_alt[2]="";
+  short _qual,_nref,_nalt,_gt,_flag;
+  TTree *tree = new TTree(sn.str().c_str(),sd.str().c_str());
+  tree->SetMaxTreeSize(20000000000); // ~20 Gb
+  tree->Branch("position", &_position,"position/I");
+  tree->Branch("ref", _ref,"_ref/C");
+  tree->Branch("alt", _alt,"_alt/C");
+  tree->Branch("qual", &_qual,"_qual/S");
+  tree->Branch("nref", &_nref,"_nref/S");
+  tree->Branch("nalt", &_nalt,"_nalt/S");
+  tree->Branch("GT", &_gt,"_gt/S");
+  tree->Branch("flag", &_flag,"_flag/S");
+  for (int i = 0;i < vcf_position.size();i++) {
+    _position=vcf_position[i];
+    _ref[0]=vcf_ref[i];
+    _alt[0]=vcf_alt[i];
+    _qual=vcf_qual[i];
+    _nref=vcf_nref[i];
+    _nalt=vcf_nalt[i];
+    _gt=vcf_gt[i];
+    _flag=vcf_flag[i];
+    tree->Fill();
+  }
+  tree->Write(sn.str().c_str(),TObject::kOverwrite);
+  delete tree;
+  file.Close();
+  cout<<"Saving tree with '"<< vcf_position.size() <<"' SNPs."<<endl;
+}
+
+
+void HisMaker::IdVar(string *user_chroms,int n_chroms,string *user_files,int n_files,bool rmchr,bool addchr)
+{
+  string one_string[1] = {""};
+  if (user_chroms == NULL) n_chroms = 0;
+  if (user_files  == NULL || n_files == 0) {
+    n_files    = 1;
+    user_files = one_string;
+  }
+  std::vector<int>  vcf_position;
+  std::map<int,char> vcf_refm;
+  std::map<int,char> vcf_altm;
+  long n_placed = 0;
+  if (user_files[0].length() > 0)
+    cout<<"Parsing file "<<user_files[0]<<" ..."<<endl;
+  else
+    cout<<"Parsing stdin ..."<<endl;
+  VcfParser *parser = new VcfParser(user_files[0]);
+  string prev_chr("");
+  while (parser->parseRecord(true)) if(parser->getFilter()=="PASS") {
+    string chr=parser->getChromosome();
+    if(addchr) chr=Genome::extendedChromName(chr);
+    if(rmchr) chr=Genome::canonicalChromName(chr);
+    if (n_chroms > 0 && findIndex(user_chroms,n_chroms,chr) < 0) continue;
+    if(chr!=prev_chr) {
+      if(!vcf_position.empty()) updateTreeIdVar(prev_chr,vcf_position,vcf_refm,vcf_altm);
+      vcf_position.clear();
+      vcf_refm.clear();
+      vcf_altm.clear();
+    }
+    int pos=parser->getPosition();
+    string tref=parser->getRef();
+    string talt=parser->getAlt();
+    if(tref.length()!=1 && tref.length()!=2) {
+      continue;
+    }
+    if(talt.length()!=1 && talt.length()!=2) {
+      continue;
+    }
+    if(tref.length()==2 && talt.length()==2) {
+      continue;
+    }
+    vcf_position.push_back(pos);
+    char ttref=tref[0];
+    char ttalt=talt[0];
+    if(tref.length()==2) {
+      ttref=tref[1];
+      ttalt='-';
+    }
+    if(talt.length()==2) {
+      ttalt=talt[1];
+      ttref='-';
+    }
+    vcf_refm[pos]=ttref;
+    vcf_altm[pos]=ttalt;
+    n_placed++;
+    prev_chr=chr;
+  }
+  if(!vcf_position.empty()) updateTreeIdVar(prev_chr,vcf_position,vcf_refm,vcf_altm);
+  delete parser;
+  
+  cout<<"Total of " <<n_placed<< " SNPs found in vcf file."<<endl;
+}
+
+void HisMaker::updateTreeIdVar(string chr,std::vector<int> &vcf_position, std::map<int,char> &vcf_refm, std::map<int,char> &vcf_altm)
+{
+  cout<<"Updating tree for '"<<chr<<"' ..."<<endl;
+  TFile file(root_file_name.Data(),"Update");
+  if (file.IsZombie()) {
+    cerr<<"Can't open/write to file '"<<root_file_name<<"'."<<endl;
+    return;
+  }
+  stringstream sd,sn;
+  sn<<"vcf_"<<chr;
+  sd<<"vcf_"<<chr<<';'<<vcf_position.size();
+  
+  int npass=0,ne=0;
+  int _position;
+  char _ref[2]="",_alt[2]="";
+  short _qual,_nref,_nalt,_gt,_flag;
+  if(file.GetListOfKeys()->Contains(sn.str().c_str())) {
+    TTree *oldtree = (TTree*) file.Get(sn.str().c_str());
+    cout << "Found tree in root file." << endl;
+    
+    TTree *tree = new TTree(sn.str().c_str(),sd.str().c_str());
+    tree->SetMaxTreeSize(20000000000); // ~20 Gb
+    tree->Branch("position", &_position,"position/I");
+    tree->Branch("ref", _ref,"_ref/C");
+    tree->Branch("alt", _alt,"_alt/C");
+    tree->Branch("qual", &_qual,"_qual/S");
+    tree->Branch("nref", &_nref,"_nref/S");
+    tree->Branch("nalt", &_nalt,"_nalt/S");
+    tree->Branch("GT", &_gt,"_gt/S");
+    tree->Branch("flag", &_flag,"_flag/S");
+    oldtree->SetBranchAddress("position", &_position);
+    oldtree->SetBranchAddress("ref", _ref);
+    oldtree->SetBranchAddress("alt", _alt);
+    oldtree->SetBranchAddress("qual", &_qual);
+    oldtree->SetBranchAddress("nref", &_nref);
+    oldtree->SetBranchAddress("nalt", &_nalt);
+    oldtree->SetBranchAddress("GT", &_gt);
+    oldtree->SetBranchAddress("flag", &_flag);
+    
+    ne=oldtree->GetEntries();
+    for(int i=0;i<ne;i++) {
+      oldtree->GetEntry(i);
+      if(vcf_refm.find(_position) == vcf_refm.end()) {
+        _flag&=~1;
+        
+      } else {
+        if(vcf_refm[_position]==_ref[0] && vcf_altm[_position]==_alt[0]) {
+          _flag|=1;
+          npass++;
+        } else _flag&=~1;
+      }
+      tree->Fill();
+    }
+    
+    // Writing the tree
+    tree->Write(sn.str().c_str(),TObject::kOverwrite);
+    
+    // Deleting the tree
+    delete tree;
+  }
+  file.Close();
+  cout<<"Saving tree with marked"<< npass <<" SNPs out of " << ne << " found in VCF file."<<endl;
+}
+
+
+
+void HisMaker::MaskVar(string *user_chroms,int n_chroms,string *user_files,int n_files,bool rmchr,bool addchr)
+{
+  if (user_chroms == NULL && n_chroms != 0) {
+    cerr<<"No chromosome names given."<< endl <<"Aborting!"<<endl;
+    return;
+  }
+
+  string chrom_names[N_CHROM_MAX];
+  if (n_chroms == 0 || (n_chroms == 1 && user_chroms[0] == "")) {
+    n_chroms = getChromNamesWithTree(chrom_names,static_cast<string>(root_file_name),true);
+    user_chroms = chrom_names;
+  }
+  
+  for (int f = 0;f < n_files;f++) if (user_files[f].length() > 0) {
+    cout<<"Parsing file "<<user_files[f]<<" ..."<<endl;
+    string fastafile=user_files[f];
+    FastaParser faparser(fastafile);
+    while (faparser.nextChromosome()) {
+      string name = faparser.getName();
+      if(addchr) name=Genome::extendedChromName(name);
+      if(rmchr) name=Genome::canonicalChromName(name);
+      int c=0;
+      for(;(user_chroms[c]!=name)&&(c<n_chroms);c++);
+      if(c>=n_chroms) continue;
+      string cseq=faparser.getData();
+
+      cout<<"Updating tree for '"<<name<<"' chromosome..."<<endl;
+
+      TFile file(root_file_name.Data(),"Update");
+      if (file.IsZombie()) {
+        cerr<<"Can't open/write to file '"<<root_file_name<<"'."<<endl;
+        return;
+      }
+      stringstream sd,sn;
+      sn<<"vcf_"<<name;
+      
+      int _position;
+      char _ref[2]="",_alt[2]="";
+      short _qual,_nref,_nalt,_gt,_flag;
+      if(file.GetListOfKeys()->Contains(sn.str().c_str())) {
+        TTree *oldtree = (TTree*) file.Get(sn.str().c_str());
+        cout << "Nasao" << endl;
+      
+        TTree *tree = new TTree(sn.str().c_str(),sn.str().c_str());
+        tree->SetMaxTreeSize(20000000000); // ~20 Gb
+        tree->Branch("position", &_position,"position/I");
+        tree->Branch("ref", _ref,"_ref/C");
+        tree->Branch("alt", _alt,"_alt/C");
+        tree->Branch("qual", &_qual,"_qual/S");
+        tree->Branch("nref", &_nref,"_nref/S");
+        tree->Branch("nalt", &_nalt,"_nalt/S");
+        tree->Branch("GT", &_gt,"_gt/S");
+        tree->Branch("flag", &_flag,"_flag/S");
+        oldtree->SetBranchAddress("position", &_position);
+        oldtree->SetBranchAddress("ref", _ref);
+        oldtree->SetBranchAddress("alt", _alt);
+        oldtree->SetBranchAddress("qual", &_qual);
+        oldtree->SetBranchAddress("nref", &_nref);
+        oldtree->SetBranchAddress("nalt", &_nalt);
+        oldtree->SetBranchAddress("GT", &_gt);
+        oldtree->SetBranchAddress("flag", &_flag);
+        
+
+        int ne=oldtree->GetEntries();
+        for(int i=0;i<ne;i++) {
+          oldtree->GetEntry(i);
+          if(cseq[_position-1]=='P') _flag|=2;
+          else _flag&=~2;
+          tree->Fill();
+        }
+        
+      // Writing the tree
+      tree->Write(sn.str().c_str(),TObject::kOverwrite);
+      
+      // Deleting the tree
+      delete tree;
+      }
+      file.Close();
+      //***
+
+  }
+  }
+
 }
 
 void HisMaker::writeTreeForChromosome(string chrom,short *arr_p,

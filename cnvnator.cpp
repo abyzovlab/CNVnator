@@ -28,6 +28,12 @@ int main(int argc,char *argv[])
   usage += argv[0];
   usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -merge file1.root ...\n";
   usage += argv[0];
+  usage += " -root file.root  [-genome name] [-chrom 1 2 ...] -vcf [file1.vcf.gz | file1.vcf ...] [-rmchr] [-addchr]\n";
+  usage += argv[0];
+  usage += " -root file.root  [-genome name] [-chrom 1 2 ...] -idvar [file1.vcf.gz | file1.vcf ...] [-rmchr] [-addchr]\n";
+  usage += argv[0];
+  usage += " -root file.root  [-genome name] [-chrom 1 2 ...] -mask strict.mask.file.fa.gz [-rmchr] [-addchr]\n";
+  usage += argv[0];
   usage += " -root file.root [-genome name] [-chrom 1 2 ...] [-d dir | -fasta file.fa.gz] -his bin_size\n";
   usage += argv[0];
   usage += " -root file.root [-chrom 1 2 ...] -stat      bin_size\n";
@@ -81,6 +87,11 @@ int main(int argc,char *argv[])
   static const int OPT_PARTITION2D = 0x08000;
   static const int OPT_HIS_NEW     = 0x10000;
   static const int OPT_AGGREGATE   = 0x20000;
+  
+  static const int OPT_VCF = 0x50001;
+  static const int OPT_IDVAR = 0x50002;
+  static const int OPT_MASK = 0x50003;
+
 
   // tree, merge, his, stat, partition, spartition, call, view, genotype
   int max_opts = 10000, n_opts = 0, opts[max_opts], bins[max_opts], gbin = 0;
@@ -93,14 +104,20 @@ int main(int argc,char *argv[])
   double over = 0.8;
   double deltaAF = 0.25;
   Genome *genome = NULL;
+  
+  // vcf, idvar, mask
+  bool rmchr=false,addchr=false;
 
   int index = 1;
   while (index < argc) {
     string option = argv[index++];
-    if (option == "-tree"  || option == "-merge" || option == "-pe") {
+    if (option == "-tree"  || option == "-merge" || option == "-pe" || option == "-vcf" || option == "-idvar" || option == "-mask") {
       if (option == "-tree")  opts[n_opts++] = OPT_TREE;
       if (option == "-merge") opts[n_opts++] = OPT_MERGE;
       if (option == "-pe")    opts[n_opts++] = OPT_PE;
+      if (option == "-vcf")  opts[n_opts++] = OPT_VCF;
+      if (option == "-idvar")    opts[n_opts++] = OPT_IDVAR;
+      if (option == "-mask")    opts[n_opts++] = OPT_MASK;
       while (index < argc && argv[index][0] != '-')
 	if (strlen(argv[index++]) > 0) data_files[n_files++] = argv[index - 1];
     } else if (option == "-his"        || option == "-his_new"     ||
@@ -221,6 +238,10 @@ int main(int argc,char *argv[])
       call_file = argv[index++];
     } else if (option == "-lite") {
       lite = true;
+    } else if (option == "-rmchr") {
+      rmchr=true;
+    } else if (option == "-addchr") {
+      addchr=true;
     } else if (option == "-range") {
       range = atoi(argv[index++]);
     } else if (option == "-relax") {
@@ -254,6 +275,21 @@ int main(int argc,char *argv[])
       HisMaker maker(out_root_file,genome);
       maker.setDataDir(dir);
       maker.produceTrees(chroms,n_chroms,data_files,n_files,lite);
+    }
+    if (option == OPT_VCF) { // vcf
+      HisMaker maker(out_root_file,genome);
+      maker.setDataDir(dir);
+      maker.addVcf(chroms,n_chroms,data_files,n_files,rmchr,addchr);
+    }
+    if (option == OPT_IDVAR) { // idvar
+      HisMaker maker(out_root_file,genome);
+      maker.setDataDir(dir);
+      maker.IdVar(chroms,n_chroms,data_files,n_files,rmchr,addchr);
+    }
+    if (option == OPT_MASK) { // mask
+      HisMaker maker(out_root_file,genome);
+      maker.setDataDir(dir);
+      maker.MaskVar(chroms,n_chroms,data_files,n_files,rmchr,addchr);
     }
     if (option == OPT_MERGE) { // merge
       HisMaker maker(out_root_file,genome);
