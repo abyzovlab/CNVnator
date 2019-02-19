@@ -349,6 +349,9 @@ void HisMaker::view(string *files,int n_files,bool useATcorr,bool useGCcorr)
       } else if (option == "print") {
 	int s = start.Atoi(), e = end.Atoi();
 	printRegion(chrom,s,e,useATcorr,useGCcorr);
+      } else if (option == "baf") {
+        int s = start.Atoi(), e = end.Atoi();
+        generateViewBAF(chrom,s,e,useATcorr,useGCcorr);
       } else {
 	int s = start.Atoi(), e = end.Atoi();
 	if (option.IsDigit())
@@ -610,6 +613,128 @@ void HisMaker::generateView(TString chrom,int start,int end,
   canv_view->cd(0);
   canv_view->Update();
 }
+
+void HisMaker::generateViewBAF(TString chrom,int start,int end,
+                            bool useATcorr,bool useGCcorr)
+{
+  int win = 1*(end - start + 1);
+  if (win < 10000) win = 10000;
+  
+  if (canv_view) delete canv_view;
+  TStyle *st = new TStyle("st","st");
+  st->SetOptStat(false);  // No box with statistics
+  st->SetOptTitle(false); // No box with title
+  gROOT->SetStyle("st");
+  canv_view = new TCanvas("canv","canv",900,900);
+  canv_view->SetFillColor(kWhite);
+  canv_view->SetBorderMode(0); // No borders
+  canv_view->Divide(1,2);
+  
+  TString title = chrom; title += ":";
+  title += start; title += "-";
+  title += end;
+  canv_view->SetTitle(title);
+  
+  TString alt_chr               = Genome::canonicalChromName(chrom.Data());
+  if (alt_chr == chrom) alt_chr = Genome::extendedChromName(chrom.Data());
+  TString name           = getRawSignalName(chrom,bin_size);
+  TString alt_name       = getRawSignalName(alt_chr,bin_size);
+  TString name_his       = getSignalName(chrom,bin_size,false,false);
+  TString alt_name_his   = getSignalName(alt_chr,bin_size,false,false);
+  TString name_corr      = getSignalName(chrom,bin_size,useATcorr,useGCcorr);
+  TString alt_name_corr  = getSignalName(alt_chr,bin_size,useATcorr,useGCcorr);
+  TString name_partition = getPartitionName(chrom,bin_size,
+                                            useATcorr,useGCcorr);
+  TString alt_name_part  = getPartitionName(alt_chr,bin_size,
+                                            useATcorr,useGCcorr);
+  TString name_merge     = name_partition + "_merge";
+  TString alt_name_merge = alt_name_part  + "_merge";
+  
+  TString file_name = root_file_name;
+  TString dir = getDirName(bin_size);
+  TH1 *raw    = getHistogram(file_name,dir,name,          alt_name);
+  TH1 *his    = getHistogram(file_name,dir,name_his,      alt_name_his);
+  TH1 *hisc   = getHistogram(file_name,dir,name_corr,     alt_name_corr);
+  TH1 *hisp   = getHistogram(file_name,dir,name_partition,alt_name_part);
+  TH1 *hism   = getHistogram(file_name,dir,name_merge,    alt_name_merge);
+  TVirtualPad *pad = canv_view->cd(1);
+  pad->SetFillColor(kWhite);
+  pad->SetLineColor(kWhite);
+  pad->SetFrameLineColor(kWhite);
+  pad->SetFrameBorderMode(0);
+  title = file_name; title.ReplaceAll(".root","");
+  drawHistograms(chrom,start,end,win,title,pad,raw,his,hisc,hisp,hism);
+  if (hisc) {
+    double mean,sigma;
+    TH1 *rd_his = getHistogram(getDistrName("chr1",bin_size,
+                                            useATcorr,useGCcorr));
+    getMeanSigma(rd_his,mean,sigma);
+    hisc->GetYaxis()->SetRangeUser(0,2*mean);
+    hisc->SetLineWidth(1);
+  }
+  pad = canv_view->cd(2);
+  pad->SetFillColor(kWhite);
+  pad->SetLineColor(kWhite);
+  pad->SetFrameLineColor(kWhite);
+  pad->SetFrameBorderMode(0);
+  title = "BAF";
+  TFile file(root_file_name);
+  if (file.IsZombie()) {
+    cerr<<"Can't open file '"<<root_file_name<<"'."<<endl;
+    return;
+  }
+  stringstream sn;
+  sn<<"vcf_"<<chrom;
+  TTree *vcftree = (TTree*)file.Get(sn.str().c_str());
+  if (!vcftree) {
+        cerr<<"Can't find VCF tree for chromosome '"<<chrom<<"' in file '"
+      <<root_file_name<<"'."<<endl;
+        return;
+  }
+  if(vcftree) drawHistogramsBAF(chrom,start,end,win,title,pad,his,vcftree);
+
+  delete vcftree;
+  
+  file.Close();
+  canv_view->cd(0);
+  canv_view->Update();
+}
+
+void HisMaker::drawHistogramsBAF(TString chrom,int start,int end,
+                              int win,TString title,
+                              TVirtualPad *pad,
+                              TH1 *main,TTree *vcftree)
+{
+  int s  = start - win, e  = end + win;
+
+  main->Draw();
+  main->GetXaxis()->SetRangeUser(s,e);
+  main->GetXaxis()->SetTitle(chrom);
+  main->GetYaxis()->SetRangeUser(0,1.05);
+  main->GetYaxis()->SetTitle(title);
+  main->SetLineWidth(3);
+  main->SetLineWidth(0);
+
+  vcftree->SetMarkerSize(0.2);
+  vcftree->SetMarkerStyle(21);
+  vcftree->SetMarkerColor(kBlue);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==1 && (flag&2)","same");
+  vcftree->SetMarkerColor(kCyan);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==1 && !(flag&2)","same");
+  vcftree->SetMarkerColor(kRed);
+  vcftree->Draw("nref/(nref+nalt):position","_gt%4==2 && (flag&2)","same");
+  vcftree->SetMarkerColor(kOrange);
+  vcftree->Draw("nref/(nref+nalt):position","_gt%4==2 && !(flag&2)","same");
+  vcftree->SetMarkerColor(kGreen);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==0 && (flag&2)","same");
+  vcftree->SetMarkerColor(kYellow);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==0 && !(flag&2)","same");
+  vcftree->SetMarkerColor(kBlack);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==3 && (flag&2)","same");
+  vcftree->SetMarkerColor(kGray);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==3 && !(flag&2)","same");
+}
+
 
 void HisMaker::genotype(string *files,int n_files,
 			bool useATcorr,bool useGCcorr)
