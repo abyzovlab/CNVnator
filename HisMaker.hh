@@ -196,6 +196,10 @@ private:
   void drawHistograms(TString chrom,int start,int end,int win,TString title,
 		      TVirtualPad *pad,TH1 *raw,TH1 *his,TH1 *hisc,
 		      TH1 *hisp,TH1* hism);
+  void generateViewBAF(TString chrom,int start,int end,
+                    bool useATcorr,bool useGCcorr);
+  void drawHistogramsBAF(TString chrom,int start,int end,int win,TString title,
+                      TVirtualPad *pad, TH1 *main, TTree *vcftreeidvar);
   bool parseInput(TString &input,
 		  TString &chrom,TString &start,TString &end,TString &option);
 
