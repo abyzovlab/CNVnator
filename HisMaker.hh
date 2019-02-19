@@ -92,6 +92,12 @@ private:
   bool writeH(bool useDir,
 	      TH1 *his1,TH1 *his2,TH1 *his3,
 	      TH1 *his4,TH1 *his5,TH1 *his6);
+  void writeTreeForVcf(string chr,std::vector<int> &vcf_position,std::vector<char> &vcf_ref,
+                      std::vector<char> &vcf_alt, std::vector<short> &vcf_qual,
+                      std::vector<short> &vcf_nref, std::vector<short> &vcf_nalt,
+                      std::vector<short> &vcf_gt, std::vector<short> &vcf_flag);
+  void updateTreeIdVar(string chr,std::vector<int> &vcf_position, std::map<int,char> &vcf_refm, std::map<int,char> &vcf_altm);
+
 
 public:
   TH1* getHistogram(TString name,TString alt_name = "");
@@ -124,6 +130,12 @@ public:
   void produceTrees(string *user_chroms,int n_chroms,
 		    string *user_files,int n_files,
 		    bool lite);
+  void addVcf(string *user_chroms,int n_chroms,
+              string *user_files,int n_files,bool rmchr,bool addchr);
+  void IdVar(string *user_chroms,int n_chroms,
+              string *user_files,int n_files,bool rmchr,bool addchr);
+  void MaskVar(string *user_chroms,int n_chroms,
+              string *user_files,int n_files,bool rmchr,bool addchr);
   void mergeTrees(string *user_chroms,int n_chroms,
 		  string *user_files,int n_files);
   void produceHistograms(string *chrom,int n_chroms,
@@ -208,7 +220,7 @@ private:
   int countGCpercentage(const char *seq,int low,int up);
   double gaussianEValue(double mean,double sigma,double *rd,int start,int end);
   int getChromNamesWithHis(string *names,bool useATcorr,bool useGCcorr);
-  int getChromNamesWithTree(string *names,string rfn = "");
+  int getChromNamesWithTree(string *names,string rfn = "",bool vcf = false);
   int getChromLenWithTree(string name,string rfn = "");
 
 public:
