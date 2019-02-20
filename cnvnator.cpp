@@ -28,9 +28,9 @@ int main(int argc,char *argv[])
   usage += argv[0];
   usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -merge file1.root ...\n";
   usage += argv[0];
-  usage += " -root file.root  [-genome name] [-chrom 1 2 ...] -vcf [file1.vcf.gz | file1.vcf] [-rmchr] [-addchr]\n";
+  usage += " -root file.root  [-genome name] [-chrom 1 2 ...] -vcf [file.vcf.gz | file.vcf] [-rmchr] [-addchr]\n";
   usage += argv[0];
-  usage += " -root file.root  [-genome name] [-chrom 1 2 ...] -idvar [file1.vcf.gz | file1.vcf] [-rmchr] [-addchr]\n";
+  usage += " -root file.root  [-genome name] [-chrom 1 2 ...] -idvar [file.vcf.gz | file.vcf] [-rmchr] [-addchr]\n";
   usage += argv[0];
   usage += " -root file.root  [-genome name] [-chrom 1 2 ...] -mask strict.mask.file.fa.gz [-rmchr] [-addchr]\n";
   usage += argv[0];
