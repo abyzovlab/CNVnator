@@ -1876,10 +1876,11 @@ void calcLevelsInner(const double* lev_rd,const double *inv_rd,
     exps[i + win] = i*exp(-0.5*i*i*inv2_bin_band);
 
 
-  double *window_rd, *window_aib;
+  double *window_rd, *window_next, *window_aib;
   #pragma omp parallel private(window_rd, window_aib)
   {
     window_rd    = new double[2*(2*win + 1)];
+    window_next  = &window_rd[2*win + 1];
     if (use_aib)
       window_aib = new double[2*(2*win + 1)];
 
@@ -1905,7 +1906,7 @@ void calcLevelsInner(const double* lev_rd,const double *inv_rd,
 	}
       }
 #ifdef USE_YEPPP
-      yepMath_Exp_V64f_V64f(window + left - bb + win, window_next + left - bb + win, right - left + 1);
+      yepMath_Exp_V64f_V64f(window_rd + left - bb + win, window_next + left - bb + win, right - left + 1);
       double dot_product = 0;
       yepCore_DotProduct_V64fV64f_S64f(exps + left - bb + win, window_next + left - bb + win, &dot_product, right - left + 1);
       grad_b_b += dot_product;
