@@ -61,7 +61,7 @@ int VcfParser::getChromosomeIndex() {
   int ix=0;
   while(cnames_[ix]!=c_chr) {
     ix++;
-    if(ix>n_chr_) return -1;
+    if(ix>=n_chr_) return -1;
   }
   return ix;
 }
