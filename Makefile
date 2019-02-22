@@ -92,7 +92,7 @@ distribution: clean all
 	@cp README          $(MAINDIR)
 	@cp CITATION        $(MAINDIR)
 	@cp license.rtf     $(MAINDIR)
-	@cp cnvnator2VCF.pl $(MAINDIR)
+	@cp cnvnator2VCF.pl plotbaf.py $(MAINDIR)
 	@echo Zipping ...
 	@ln -s $(MAINDIR)
 	@zip -qr $(DISTRIBUTION) $(CNVDIR)
