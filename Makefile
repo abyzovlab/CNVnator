@@ -1,4 +1,4 @@
-VERSION	       = v0.3.4
+VERSION	       = v0.4
 override LIBS += -lz -lbz2 -lcurl -llzma
 
 ifneq ($(wildcard $(ROOTSYS)/lib/root),)
@@ -78,18 +78,7 @@ distribution: clean all
 	@echo Copying files ...
 	@cp *.hh *.cpp  $(SRCDIR)
 	@cp Makefile    $(SRCDIR)
-	@cp -r samtools $(SRCDIR)
-	@rm -f $(SRCDIR)/samtools/samtools
-	@rm -f $(SRCDIR)/samtools/*.o
-	@rm -f $(SRCDIR)/samtools/*/*.o
-	@rm -f $(SRCDIR)/samtools/*/*/*.o
-	@rm -f $(SRCDIR)/samtools/*.a
-	@rm -f $(SRCDIR)/samtools/*/*.a
-	@rm -f $(SRCDIR)/samtools/*/*/*.a
-	@rm -fr $(SRCDIR)/samtools/.svn
-	@rm -fr $(SRCDIR)/samtools/*/.svn
-	@rm -fr $(SRCDIR)/samtools/*/*/.svn
-	@cp README          $(MAINDIR)
+	@cp README.md       $(MAINDIR)
 	@cp CITATION        $(MAINDIR)
 	@cp license.rtf     $(MAINDIR)
 	@cp cnvnator2VCF.pl plotbaf.py $(MAINDIR)

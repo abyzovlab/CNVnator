@@ -337,7 +337,7 @@ void HisMaker::view(string *files,int n_files,bool useATcorr,bool useGCcorr)
       TString obj_class,class_fun,args;
       sin>>obj_class>>class_fun>>args;
       executeROOT(obj_class,class_fun,args);
-    } else if (tmp == "gview") {
+    } else if (tmp == "gview" || tmp == "all") {
       generateView(useATcorr,useGCcorr);
     } else if (parseInput(input,chrom,start,end,option)) {
       if (option == "genotype") {
@@ -929,6 +929,8 @@ int HisMaker::extract_pe(TString input,
 bool HisMaker::parseInput(TString &input,TString &chrom,
 			  TString &start,TString &end,TString &option)
 {
+  if (input.Length() <= 0) return false;
+
   int i = 0;
   chrom = start = end = option = "";
   while (i < input.Length() && input[i] == ' ') i++; // Space
@@ -944,13 +946,44 @@ bool HisMaker::parseInput(TString &input,TString &chrom,
   while (i < input.Length() && input[i] != ' ')
     option   += input[i++];
 
-  if (input.Length() <= 0 || !start.IsDigit() || !end.IsDigit()) {
-    if (input.Length() <= 0) ;
-    else if (!start.IsDigit())
+//   if (!start.IsDigit() || !end.IsDigit()) {
+//     else
+  if (!start.IsDigit()) {
+    TString s = start(0,start.Length() - 1);
+    char    z = start[start.Length() - 1];
+    if (s.IsDigit()) {
+      if (z == 'M' || z == 'm') s += "000000";
+      if (z == 'k' || z == 'K') s += "000";
+    }
+    if (!s.IsDigit()) {
       cout<<"Invalid start "<<start<<"."<<endl;
-    else if (!end.IsDigit())
+      return false;
+    }
+    start = s;
+  }
+
+  if (!end.IsDigit()) {
+    TString e = end(0,end.Length() - 1);
+    char    z = end[end.Length() - 1];
+    if (e.IsDigit()) {
+      if (z == 'M' || z == 'm') e += "000000";
+      if (z == 'k' || z == 'K') e += "000";
+    }
+    if (!e.IsDigit()) {
       cout<<"Invalid end "<<end<<"."<<endl;
-    return false;
+      return false;
+    }
+    end = e;
+  }
+
+  if (!option.IsDigit()) {
+    TString o = option(0,option.Length() - 1);
+    char    z = option[option.Length() - 1];
+    if (o.IsDigit()) {
+      if (z == 'M' || z == 'm') o += "000000";
+      if (z == 'k' || z == 'K') o += "000";
+      option = o;
+    }
   }
 
   return true;
@@ -1969,10 +2002,11 @@ void calcLevelsInner(const double* lev_rd,const double *inv_rd,
     exps[i + win] = i*exp(-0.5*i*i*inv2_bin_band);
 
 
-  double *window_rd, *window_aib;
+  double *window_rd, *window_next, *window_aib;
   #pragma omp parallel private(window_rd, window_aib)
   {
     window_rd    = new double[2*(2*win + 1)];
+    window_next  = &window_rd[2*win + 1];
     if (use_aib)
       window_aib = new double[2*(2*win + 1)];
 
@@ -1998,7 +2032,7 @@ void calcLevelsInner(const double* lev_rd,const double *inv_rd,
 	}
       }
 #ifdef USE_YEPPP
-      yepMath_Exp_V64f_V64f(window + left - bb + win, window_next + left - bb + win, right - left + 1);
+      yepMath_Exp_V64f_V64f(window_rd + left - bb + win, window_next + left - bb + win, right - left + 1);
       double dot_product = 0;
       yepCore_DotProduct_V64fV64f_S64f(exps + left - bb + win, window_next + left - bb + win, &dot_product, right - left + 1);
       grad_b_b += dot_product;
@@ -3955,6 +3989,7 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
     while (parser->parseRecord()) {
       if (parser->isUnmapped())  continue;
       if (parser->isDuplicate()) continue;
+      if (parser->isSecondary()) continue;
 
       if (use_ref) { // Using reference genome
 	string chr = parser->getChromosome();
@@ -4047,7 +4082,7 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
       if (counts_u[c]) arru = &counts_u[c][1];
 
       if (lite) // Aggregating by 100 consequites positions
-	for (int pos = 0;pos < clens[c];pos += 100) {
+	for (int pos = 1;pos < clens[c];pos += 100) {
 	  int i = pos + 1;
 	  while (i < clens[c] && i < pos + 100) {
 	    arrp[pos] += arrp[i];
