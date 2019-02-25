@@ -230,5 +230,4 @@ awk '{ print $2 } END { print "exit" }' calls.cnvnator | ./cnvnator -root NA1287
 
 
 
-
 Please send your comments and suggestions to abyzov.alexej@mayo.edu.
