@@ -79,6 +79,7 @@ distribution: clean all
 	@cp *.hh *.cpp  $(SRCDIR)
 	@cp Makefile    $(SRCDIR)
 	@cp README.md       $(MAINDIR)
+	@cp ReleaseNotes.md $(MAINDIR)
 	@cp CITATION        $(MAINDIR)
 	@cp license.rtf     $(MAINDIR)
 	@cp cnvnator2VCF.pl plotbaf.py $(MAINDIR)
