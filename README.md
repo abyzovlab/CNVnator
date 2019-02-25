@@ -68,13 +68,16 @@ parsed from the input sam/bam file header.
 ### 2.1 EXTRACTING READ MAPPING FROM BAM/SAM FILES
 
 ```
-$ ./cnvnator -root out.root [-chrom name1 ...] -tree [file1.bam ...]
+$ ./cnvnator -root out.root [-chrom name1 ...] -tree [file1.bam ...] [-lite]
 ```
 where,
 
-out.root  -- output ROOT file. See ROOT package documentation.  
-name1 ... -- chromosome name(s).  
-file1.bam ...  -- bam file(s).  
+
+-root out.root  -- specifies output ROOT file. See ROOT package documentation.  
+-chrom name1 ... -- specifies chromosome name(s).  
+-tree file1.bam ...  -- specifies bam file(s) names.
+-lite -- use this option to produce a "lighter" (smaller) root file.
+
 
 Chromosome names must be specified the same way as they are described in the sam/bam
 header, e.g., chrX or X. One can specify multiple chromosomes separated by
@@ -185,7 +188,71 @@ Note: histogram generation, statistics calculation, signal partitioning, and
 CNV calling should be completed/redone after merging.
 
 
-### 2.7 VISUALIZING SPECIFIED REGIONS
+## 3. Importing VCF data
+
+To import variant data from VCF file use following option:
+
+```
+./cnvnator -root file.root [-chrom name1 ...] [-rmchr | -addchr] -vcf file.vcf.gz
+```
+
+If chromosome names are not specified, data for all chromosomes from file.vcf.gz will be imported. If 
+you would like to add or remove the "chr" prefix from your chromosome names, use options -addchr or -rmchr respectively. 
+It is important that chromosome names in the vcf file and the SAM/BAM file match. 
+
+To mark known SNPs from the SNP database:
+
+```
+./cnvnator -root file.root [-chrom name1 ...] [-rmchr | -addchr] -idvar databasefile.vcf.gz
+```
+
+On running the above line, each SNP will be associated with a binary flag which equals 1 if it's in the database.
+
+
+To mark variants based on genome accessibility using mask file from the 1000 Genomes Project:
+
+```
+./cnvnator -root file.root [-chrom name1 ...] [-rmchr | -addchr] -mask maskfile.fa.gz
+```
+
+On running the above line, each SNP will be associated with a binary flag which equals 1 if it's in the P-region
+
+
+## 4. Genotyping genomic regions and visualization
+
+For efficient genotype calculations, we recommend that you sort the list of regions by
+chromosomes.
+
+```
+./cnvnator -root file.root -genotype bin_size [-ngc]
+```
+
+Once prompted enter a genomic region, e.g., 
+
+```
+>12:11396601-11436500
+ or
+>chr12:11396601-11436500
+ or 
+>12 11396601 11436500
+ or
+>chr12 11396601 11436500
+```
+
+One can also perform instant genotyping by adding the word 'genotype', e.g.,
+
+```
+>12:11396601-11436500 genotype
+ or
+>chr12:11396601-11436500 genotype
+ or
+>12 11396601 11436500 genotype
+ or
+>chr12 11396601 11436500 genotype
+```
+
+
+### 4.1 Visualizing specified regions
 
 ```
 ./cnvnator -root file.root [-chrom name1 ...] -view bin_size [-ngc]
@@ -216,39 +283,6 @@ be displayed as well, e.g.,
 >chr12 11396601 11436500 100000
 ```
 
-One can also perform instant genotyping by adding the word 'genotype', e.g.,
-
-```
->12:11396601-11436500 genotype
- or
->chr12:11396601-11436500 genotype
- or
->12 11396601 11436500 genotype
- or
->chr12 11396601 11436500 genotype
-```
-
-## 3. Genotyping genomic regions
-
-For efficient genotype calculations, we recommend that you sort the list of regions by
-chromosomes.
-
-```
-./cnvnator -root file.root -genotype bin_size [-ngc]
-```
-
-Once prompted enter a genomic region, e.g., 
-
-```
->12:11396601-11436500
- or
->chr12:11396601-11436500
- or 
->12 11396601 11436500
- or
->chr12 11396601 11436500
-```
-
 One can also perform instant visualization by adding the word 'view', e.g.,
 
 ```
@@ -260,6 +294,64 @@ One can also perform instant visualization by adding the word 'view', e.g.,
  or
 >chr12 11396601 11436500 view
 ```
+
+To find read support for CNVs/region of interest, use the -pe option as below:
+
+```
+./cnvnator -pe file1.bam ... -qual val(20) -over val(0.8) [-f file]
+```
+
+### 4.2 Plotting B-allele frequency (BAF)
+
+To plot BAF data along RD use baf option in view mode:
+
+```
+./cnvnator -root file.root -view bin_size
+
+>1:1-200000000 baf
+```
+
+The resulting output plot has two panels. On the uper panel, black line corresponds to binned RD
+signal, green to segmentation, and red to calls. On the bottom panel each dot corresponds to BAF 
+value of the SNPs. Colors represent following:
+ 
+* black - homozygous (1/1 or in phased case 1|1) SNPs in P-region of the strict mask,
+* grey - homozygous (1/1 or in phased case 1|1) SNPs out of P-region of the strict mask,
+* blue - heterozygous (0/1 or in phased case 0|1) SNPs in P-region of the strict mask,
+* cyan - heterozygous (0/1 or in phased case 0|1) SNPs out of P-region of the strict mask,
+* red - heterozygous (only in phased case 1|0) SNPs in P-region of the strict mask,
+* orange - heterozygous (only in phased case 1|0) SNPs out of P-region of the strict mask.
+
+Plot BAF data with python tool plotbaf.py (requires numpy, matplotlib installed):
+```
+./plotbaf.py [-h] [-bs BINSIZE] [-res RESOLUTION] [-o SAVE_FILE] [-t TITLE]
+             [-nomask] [-useid] root_file region
+```
+
+required arguments:
+root\_file: cnvnator root file name
+region: chromosomal coordinates in the format chr:start-end
+
+
+optional arguments: 
+size of bins: -bs BINSIZE, --binsize BINSIZE
+likelihood function resolution: -res RESOLUTION, --resolution RESOLUTION
+save plot to file: -o SAVE_FILE, --save_file SAVE_FILE
+plot title: -t TITLE, --title TITLE
+do calculations without mask: -nomask
+do calculations using idvar filter: -useid
+
+Output plot consists of four panels. Starting from the top one, they are:
+
+* BAF value for heterozygous SNPs.
+* Likelihood function. Light dots on the imagemap represent the most likely value of BAF at each bin.
+* Red line represents a distance between maxima positions in likelihood function that is equivalent
+  to twice the absolute difference between most likely BAF value and 1/2. Blue dots represent the ratio
+  between the value of the likelihood function at 1/2 and its maximum value.
+* Green dots and blue error-bars correspond to mean MAF and corresponding standard deviation per bin,
+  respectively. Bin size is 100k base pairs.
+
+
 
 ### Additional notes
 
@@ -276,6 +368,7 @@ Another example:
 ```
 awk '{ print $2 } END { print "exit" }' calls.cnvnator | ./cnvnator -root NA12878.root -genotype 100
 ```
+
 
 ## Contact Us
 
