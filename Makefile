@@ -16,9 +16,10 @@ endif
 SAMDIR = samtools
 SAMLIB = $(SAMDIR)/libbam.a
 HTSDIR = $(wildcard $(SAMDIR)/htslib-*)
+HTSDIRI = $(HTSDIR)/htslib
 ifneq ($(HTSDIR),)
         SAMLIB += $(HTSDIR)/libhts.a
-        INC    += -I$(HTSDIR)
+        INC    += -I$(HTSDIR) -I$(HTSDIRI)
 endif
 
 ifeq ($(OMP),no)
@@ -45,6 +46,7 @@ OBJS   = $(OBJDIR)/cnvnator.o  \
 	 $(OBJDIR)/HisMaker.o  \
 	 $(OBJDIR)/AliParser.o \
 	 $(OBJDIR)/FastaParser.o \
+	 $(OBJDIR)/VcfParser.o \
 	 $(OBJDIR)/Genotyper.o \
 	 $(OBJDIR)/Interval.o  \
 	 $(OBJDIR)/Genome.o
@@ -79,7 +81,7 @@ distribution: clean all
 	@cp README.md       $(MAINDIR)
 	@cp CITATION        $(MAINDIR)
 	@cp license.rtf     $(MAINDIR)
-	@cp cnvnator2VCF.pl $(MAINDIR)
+	@cp cnvnator2VCF.pl plotbaf.py $(MAINDIR)
 	@echo Zipping ...
 	@ln -s $(MAINDIR)
 	@zip -qr $(DISTRIBUTION) $(CNVDIR)
