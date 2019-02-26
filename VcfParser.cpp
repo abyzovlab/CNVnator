@@ -83,7 +83,7 @@ bool VcfParser::parseRecord(bool idvar)
         if(!idvar) {
           ngt = bcf_get_format_int32(h, rec, "GT", &gt, &ngt_arr);
           nad = bcf_get_format_int32(h, rec, "AD", &ad, &nad_arr);
-          if(ngt==0 || nad==0) continue;
+          if(ngt<=0 || nad<=0) continue;
         }
         c_chr=cnames_[rec->rid];
         c_pos=rec->pos;
