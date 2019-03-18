@@ -1,7 +1,5 @@
 # README 
 
-
-
 ## Quick start guide
 
 ```
@@ -384,8 +382,23 @@ Output plot consists of four panels. Starting from the top one, they are:
   respectively. Bin size is 100k base pairs.
 
 
+## 5. Exporting CNV calls as VCFs
 
+In order to export your CNV calls as a VCF file, use the script `cnvnator2VCF.pl` as
 
+```
+cnvnator2VCF.pl -prefix study1 -reference GRCh37 sample1.cnvnator.out /path/to/individual/fasta_files
+```
+
+where, 
+
+-prefix specifies a prefix string you want to append to the ID field in your output VCF. For e.g., if you set your -prefix as "study1", then your resulting ID column will be study1_CNVnator_del_1, study1_CNVnator_del_2 etc.
+
+-reference stands for the name of reference genome you used, for e.g., GRCh37, hg19 etc.
+
+file.calls is your CNVnator output file with the CNV calls
+
+genome_dir is the directory containing your individual reference fasta files such as 1.fa, 2.fa etc. (or chr1.fa, chr2.fa etc.)
 
 
 ## Contact Us
