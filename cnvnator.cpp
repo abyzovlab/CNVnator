@@ -13,6 +13,8 @@ using namespace std;
 #include "AliParser.hh"
 #include "HisMaker.hh"
 #include "EXOnator.hh"
+#include "IO.hh"
+#include "Visualizer.hh"
 
 int main(int argc,char *argv[])
 {
@@ -36,6 +38,8 @@ int main(int argc,char *argv[])
   usage += argv[0];
   usage += " -root file.root [-genome name] [-chrom 1 2 ...] [-d dir | -fasta file.fa.gz] -his bin_size\n";
   usage += argv[0];
+  usage += " -root file.root [-genome name] [-chrom 1 2 ...] -baf bin_size [-hap] [-useid] [-nomask]\n";
+  usage += argv[0];
   usage += " -root file.root [-chrom 1 2 ...] -stat      bin_size\n";
   usage += argv[0];
   usage += " -root file.root                  -eval      bin_size\n";
@@ -51,6 +55,10 @@ int main(int argc,char *argv[])
   usage += " -root file.root -view     bin_size [-ngc]\n";
   usage += argv[0];
   usage += " -pe   file1.bam ... -qual val(20) -over val(0.8) [-f file]\n";
+  usage += argv[0];
+  usage += "-root file.root [-chrom 1 2 ...] -cptrees newfile.root\n";
+  usage += argv[0];
+  usage += "-root file.root -ls\n";
   usage += "\n";
   usage += "Valid genomes (-genome option) are: NCBI36, hg18, GRCh37, hg19, mm9, hg38, GRCh38\n";
 
@@ -77,6 +85,7 @@ int main(int argc,char *argv[])
   static const int OPT_EPARTITION = 0x00040;
   static const int OPT_CALL       = 0x00080;
   static const int OPT_VIEW       = 0x00100;
+  static const int OPT_VIEWER     = 0x00101;
   static const int OPT_GENOTYPE   = 0x00200;
   static const int OPT_EVAL       = 0x00400;
   static const int OPT_PE         = 0x00800;
@@ -91,6 +100,11 @@ int main(int argc,char *argv[])
   static const int OPT_VCF = 0x50001;
   static const int OPT_IDVAR = 0x50002;
   static const int OPT_MASK = 0x50003;
+  static const int OPT_BAF = 0x50004;
+
+  static const int OPT_CPTREES = 0x60001;
+  static const int OPT_LS = 0x60002;
+
 
 
   // tree, merge, his, stat, partition, spartition, call, view, genotype
@@ -105,19 +119,26 @@ int main(int argc,char *argv[])
   double deltaAF = 0.25;
   Genome *genome = NULL;
   
-  // vcf, idvar, mask
+  // vcf, idvar, mask option -rmchr -addchr
   bool rmchr=false,addchr=false;
+  // baf option -hap -useid -nomask
+  bool useHaplotype=false,useid=false,usemask=true;
+  
+  string signal="";
+  string signal2="";
+
 
   int index = 1;
   while (index < argc) {
     string option = argv[index++];
-    if (option == "-tree"  || option == "-merge" || option == "-pe" || option == "-vcf" || option == "-idvar" || option == "-mask") {
+    if (option == "-tree"  || option == "-merge" || option == "-pe" || option == "-vcf" || option == "-idvar" || option == "-mask" || option == "-cptrees") {
       if (option == "-tree")  opts[n_opts++] = OPT_TREE;
       if (option == "-merge") opts[n_opts++] = OPT_MERGE;
       if (option == "-pe")    opts[n_opts++] = OPT_PE;
       if (option == "-vcf")  opts[n_opts++] = OPT_VCF;
       if (option == "-idvar")    opts[n_opts++] = OPT_IDVAR;
       if (option == "-mask")    opts[n_opts++] = OPT_MASK;
+      if (option == "-cptrees")    opts[n_opts++] = OPT_CPTREES;
       while (index < argc && argv[index][0] != '-')
 	if (strlen(argv[index++]) > 0) data_files[n_files++] = argv[index - 1];
     } else if (option == "-his"        || option == "-his_new"     ||
@@ -125,8 +146,9 @@ int main(int argc,char *argv[])
 	       option == "-stat"       || option == "-eval"        ||
 	       option == "-partition"  || option == "-partition2D" ||
 	       option == "-epartition" || option == "-spartition"  ||
-	       option == "-call"       || option == "-view"        ||
-	       option == "-genotype"   || option == "-aggregate") {
+	       option == "-call"       || option == "-view"        || option == "-viewer"        ||
+	       option == "-genotype"   || option == "-aggregate"   ||
+         option == "-baf") {
       int bs = 0;
       if (index < argc && argv[index][0] != '-') {
 	TString tmp = argv[index++];
@@ -146,11 +168,15 @@ int main(int argc,char *argv[])
       if (option == "-spartition")  opts[n_opts] = OPT_SPARTITION;
       if (option == "-call")        opts[n_opts] = OPT_CALL;
       if (option == "-view")        opts[n_opts] = OPT_VIEW;
+      if (option == "-viewer")        opts[n_opts] = OPT_VIEWER;
       if (option == "-genotype")    opts[n_opts] = OPT_GENOTYPE;
       if (option == "-his_new")     opts[n_opts] = OPT_HIS_NEW;
       if (option == "-eval")        opts[n_opts] = OPT_EVAL;
       if (option == "-aggregate")   opts[n_opts] = OPT_AGGREGATE;
+      if (option == "-baf")         opts[n_opts] = OPT_BAF;
       bins[n_opts++] = bs;
+    } else if (option == "-ls") {
+      opts[n_opts++] = OPT_LS;
     } else if (option == "-panel") {
       opts[n_opts++] = OPT_PANEL;
     } else if (option == "-fit")   {
@@ -242,8 +268,24 @@ int main(int argc,char *argv[])
       rmchr=true;
     } else if (option == "-addchr") {
       addchr=true;
+    } else if (option == "-useid") {
+      useid=true;
+    } else if (option == "-nomask") {
+      usemask=false;
+    } else if (option == "-hap") {
+      useHaplotype=true;
     } else if (option == "-range") {
       range = atoi(argv[index++]);
+    } else if (option == "-signal") {
+      while((index < argc) && argv[index][0] != '-') {
+        if(signal!="") signal+=" ";
+        signal += argv[index++];
+      }
+    } else if (option == "-signal2") {
+      while((index < argc) && argv[index][0] != '-') {
+        if(signal2!="") signal2+=" ";
+        signal2 += argv[index++];
+      }
     } else if (option == "-relax") {
       relaxCalling = true;
     } else if (option == "-deltaAF") {
@@ -291,6 +333,11 @@ int main(int argc,char *argv[])
       maker.setDataDir(dir);
       maker.MaskVar(chroms,n_chroms,data_files,n_files,rmchr,addchr);
     }
+    if (option == OPT_CPTREES) { // cptrees
+      IO io(out_root_file);
+      if(n_files==1) io.cptrees(data_files[0],chroms,n_chroms);
+      else cerr << "Provide one new root file name!" << endl;
+    }
     if (option == OPT_MERGE) { // merge
       HisMaker maker(out_root_file,genome);
       maker.mergeTrees(chroms,n_chroms,data_files,n_files);
@@ -308,17 +355,27 @@ int main(int argc,char *argv[])
         if (option == OPT_HISMERGE)  maker.produceHistograms(chroms,n_chroms,root_files,n_root_files,true);
       }
     }
+    if (option == OPT_BAF) { // baf
+      HisMaker maker(out_root_file,bin,useGCcorr,genome);
+      maker.setDataDir(dir);
+      maker.produceBAF(chroms,n_chroms,useGCcorr,useHaplotype,useid,usemask);
+    }
     if (option == OPT_STAT) { // stat
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
       maker.stat(chroms,n_chroms,useATcorr);
     }
     if (option == OPT_PARTITION) { // partition
+      unsigned int flag=(usemask?FLAG_USEMASK:0)|(useid?FLAG_USEID:0)|(useHaplotype?FLAG_USEHAP:0)|(useGCcorr?FLAG_GC_CORR:0);
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
-      maker.partition(chroms,n_chroms,false,useATcorr,useGCcorr,false,range);
+      if(signal=="") maker.partition(chroms,n_chroms,false,useATcorr,useGCcorr,false,range);
+      else maker.partitionSignal(bin,signal,flag,chroms,n_chroms,false,false,range);
     }
     if (option == OPT_PARTITION2D) { // partition
+      unsigned int flag=(usemask?FLAG_USEMASK:0)|(useid?FLAG_USEID:0)|(useHaplotype?FLAG_USEHAP:0)|(useGCcorr?FLAG_GC_CORR:0);
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
-      maker.partition2D(chroms,n_chroms,false,useATcorr,useGCcorr,false,range);
+//      maker.partition2D(chroms,n_chroms,false,useATcorr,useGCcorr,false,range);
+      if(signal!="" && signal2!="") maker.partitionSignal2D(bin,signal,signal2,flag,chroms,n_chroms,range);
+      else maker.partitionSignal2D(bin,"RD","SNP i1",flag,chroms,n_chroms,range);
     }
     if (option == OPT_EPARTITION) { // exome partition
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
@@ -332,6 +389,13 @@ int main(int argc,char *argv[])
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
       TApplication theApp("App",0,0);
       maker.view(root_files,n_root_files,useATcorr,useGCcorr);
+      theApp.Run();
+    }
+    if (option == OPT_VIEWER) { // viewer
+      unsigned int flags=(usemask?FLAG_USEMASK:0)|(useid?FLAG_USEID:0)|(useHaplotype?FLAG_USEHAP:0)|(useGCcorr?FLAG_GC_CORR:0);
+      Visualizer vis(root_files,n_root_files,bin,flags);
+      TApplication theApp("App",0,0);
+      vis.prompt();
       theApp.Run();
     }
     if (option == OPT_GENOTYPE) { // genotype
@@ -376,6 +440,10 @@ int main(int argc,char *argv[])
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
       maker.setDataDir(dir);
       maker.aggregate(root_files,n_root_files,chroms,n_chroms);
+    }
+    if (option == OPT_LS) { // aggregate
+      IO io(out_root_file);
+      io.ls();
     }
   }
 

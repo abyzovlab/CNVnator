@@ -43,6 +43,8 @@ CXX    = g++ -O3 -std=c++11 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
 OBJDIR = obj
 OBJS   = $(OBJDIR)/cnvnator.o  \
 	 $(OBJDIR)/EXOnator.o  \
+	 $(OBJDIR)/IO.o  \
+	 $(OBJDIR)/Visualizer.o  \
 	 $(OBJDIR)/HisMaker.o  \
 	 $(OBJDIR)/AliParser.o \
 	 $(OBJDIR)/FastaParser.o \
