@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import matplotlib.pyplot as plt
+
 import numpy as np
 import ROOT
 import argparse
@@ -15,10 +15,16 @@ parser.add_argument("-t", "--title",
                     help="plot title", default=None)
 parser.add_argument("-rdbs", "--rdbinsize", type=int,
                     help="size of bins for RD signal", default=100000)
-parser.add_argument('-nomask', action='store_true')
-parser.add_argument('-useid', action='store_true')
+parser.add_argument('-nomask', help="If not set only SNPs in P mask region will be used", action='store_true')
+parser.add_argument('-useid', help="Use just SNPs that exist in given database", action='store_true')
+parser.add_argument('-oldrootfile', help="Usin root file made by cnvnatro v0.4 or earlier", action='store_true')
 
 args=parser.parse_args()
+
+if args.save_file:
+  import matplotlib as mpl
+  mpl.use('Agg')
+import matplotlib.pyplot as plt
 
 chrs=args.chromosomes.split(",")
 bs=args.binsize
@@ -40,7 +46,10 @@ for c in chrs:
   rd[c]=[0 for i in range(n)]
   rdcount[c]=[0 for i in range(n)]
   maxbin[c]=0
-  t=f.Get("vcf_"+c)
+  tname="snp_"+c
+  if args.oldrootfile:
+    tname="vcf_"+c
+  t=f.Get(tname)
   print "Reading SNP for",c,"chromosome..."
   data=[]
   for e in t:
@@ -99,8 +108,8 @@ for c in chrs:
     if bafall[cstart[c]+i]>0:
       x.append(np.pi/2-theta[cstart[c]+i])
       y.append(bafall[cstart[c]+i])
-  plt.polar(x,y,color=cc)
-  plt.fill_between(x,y,[1.0 for i in y],color=cc,alpha=0.2)
+  plt.polar(x,y,color=cc,linewidth=0.3)
+  plt.fill_between(x,y,[1.0 for i in y],color=cc,alpha=0.8)
 
 cc=(0.6,0.6,0.6)
 for c in chrs:
@@ -114,8 +123,8 @@ for c in chrs:
     if rdall[cstart[c]+i]<(3*ard) and rdall[cstart[c]+i]>(ard/3):
       x.append(np.pi/2-theta[cstart[c]+i])
       y.append(rdall[cstart[c]+i]/(3*ard))
-  plt.polar(x,y,color=cc)
-  plt.fill_between(x,[0.1 for i in y],y,color=cc,alpha=0.2)
+  plt.polar(x,y,color=cc,linewidth=0.3)
+  plt.fill_between(x,[0.1 for i in y],y,color=cc,alpha=0.8)
 
 for c in chrs:
   ax.text(np.pi/2-theta[(cstart[c]+cend[c])/2], 0.8, c, fontsize=8)
