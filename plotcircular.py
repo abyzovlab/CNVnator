@@ -5,7 +5,7 @@ import ROOT
 import argparse
 
 parser = argparse.ArgumentParser(description='Plot BAF')
-parser.add_argument("root_file", help="cnvnator root file name")
+parser.add_argument("root_file", help="CNVnator root file name")
 parser.add_argument("-chrom","--chromosomes", help="Comma separated chromosom list",default="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22")
 parser.add_argument("-bs", "--binsize", type=int,
                     help="size of bins", default=1000000)
@@ -17,7 +17,7 @@ parser.add_argument("-rdbs", "--rdbinsize", type=int,
                     help="size of bins for RD signal", default=100000)
 parser.add_argument('-nomask', help="If not set only SNPs in P mask region will be used", action='store_true')
 parser.add_argument('-useid', help="Use just SNPs that exist in given database", action='store_true')
-parser.add_argument('-oldrootfile', help="Usin root file made by cnvnatro v0.4 or earlier", action='store_true')
+parser.add_argument('-oldrootfile', help="Using root file made by CNVnator v0.4 or earlier (SNP tree names starting with vcf_ insted snp_)", action='store_true')
 
 args=parser.parse_args()
 
