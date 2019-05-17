@@ -9,6 +9,8 @@ parser.add_argument("root_file", help="cnvnator root file name")
 parser.add_argument("region", help="Chromosome or region in format chr:START-END")
 parser.add_argument("-bs", "--binsize", type=int,
                     help="size of bins", default=100000)
+parser.add_argument("-rdbs", "--rdbinsize", type=int,
+                    help="size of bins for RD signal", default=10000)
 parser.add_argument("-res", "--resolution", type=int,
                     help="size of bins", default=100)
 parser.add_argument("-o", "--save_file",
@@ -41,6 +43,17 @@ for e in t:
 res=args.resolution
 bs=args.binsize
 
+rdbs=args.rdbinsize
+rd=[]
+xrd=[]
+
+frd=f.Get("bin_"+str(rdbs)).Get("his_rd_p_"+chr+"_"+str(rdbs)+"_GC")
+nrd=frd.GetSize()
+for i in range(nrd):
+  if ((i+1)*rdbs>pmin) and (i*rdbs<pmax):
+    rd.append(frd.GetBinContent(i))
+    xrd.append(i*rdbs)
+
 def f(k,m,p):
   if(k==m):
     return 1.0*p**k*(1-p)**m
@@ -65,14 +78,14 @@ g2=[]
 baf=[]
 pos=[]
 for i in data:
-  if (i[3]+i[2])>0 and (i[1]==1 or i[1]==5 or i[1]==6) and (args.nomask or i[4]>1) and (i[4]==1 or i[4]==3 or not args.useid):
+  if (i[3]+i[2])>0 and i[1]==1 and (args.nomask or i[4]>1) and (i[4]==1 or i[4]==3 or not args.useid):
     pos.append(i[0])
     nr=i[2]
     na=i[3]
-    if na<nr:
-      na=na+1
-    elif nr<na:
-      nr=nr+1
+#    if na<nr:
+#      na=na+1
+#    elif nr<na:
+#      nr=nr+1
     g1.append(nr)
     g2.append(na)    
     baf.append(1.0*na/(nr+na))
@@ -128,7 +141,18 @@ for i in range(n):
   ng2.append(1.0*m[i][res/2]/m1)  
 
 fig=plt.figure(1,figsize=(12, 8), dpi=150, facecolor='w', edgecolor='k')
-plt.subplot(411)
+
+plt.subplot(511)
+plt.ylabel("RD")
+plt.plot(xrd,rd)
+rdm=numpy.mean(rd)
+rdsd=numpy.std(rd)
+
+plt.axis([pos[0], pos[-1], 0, 2.0*rdm])
+plt.grid(True)
+plt.tick_params(axis='x',which='both',bottom=False,top=False,labelbottom=False)
+
+plt.subplot(512)
 plt.ylabel("BAF")
 plt.scatter(pos,baf,s=2,c="b", alpha=0.5,marker='.')
 plt.axis([pos[0], pos[-1], 0, 1])
@@ -136,14 +160,14 @@ plt.yticks([0,0.25,0.5,0.75,1.0],("0","0.25","0.50","0.75","1.00"))
 plt.grid(True)
 plt.tick_params(axis='x',which='both',bottom=False,top=False,labelbottom=False)
 
-plt.subplot(412)
+plt.subplot(513)
 plt.ylabel("Likelihood")
 plt.imshow(numpy.transpose(m),aspect='auto')
 plt.tick_params(axis='x',which='both',bottom=False,top=False,labelbottom=False)
 plt.yticks([0,res/4,res/2-1,3*res/4-1,res+1],("1.00","0.75","0.50","0.25","0.00"))
 plt.grid(True,color="w")
 
-plt.subplot(413)
+plt.subplot(514)
 plt.ylabel("W, C/M")
 
 plt.plot(binp,ng,'r-',binp,ng2,'b.', markersize=5)
@@ -152,11 +176,12 @@ plt.yticks([0,0.25,0.5,0.75,1.0],("0","0.25","0.50","0.75","1.00"))
 plt.grid(True)
 plt.tick_params(axis='x',which='both',bottom=False,top=False,labelbottom=False)
 
-plt.subplot(414)
+plt.subplot(515)
 plt.ylabel("MAF")
 plt.errorbar(binp, av, yerr=sd, fmt='o',marker='o', mfc='red', mec='green', ms=0.1, mew=0.0)
 plt.plot(binp, av,alpha=0.5,marker='.')
 plt.axis([binp[0], binp[-1], 0, 0.6])
+#plt.yticks([0,0.2,0.25,0.37,0.5,0.75,1.0],("0","0.2","0.25","0.37","0.50","0.75","1.00"))
 plt.yticks([0,0.25,0.5,0.75,1.0],("0","0.25","0.50","0.75","1.00"))
 plt.grid(True)
 if args.title:
