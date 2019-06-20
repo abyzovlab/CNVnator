@@ -7,12 +7,14 @@
 $ ./cnvnator -root file.root -tree file.bam
 
 # Generate histogram
-$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y
+$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y -d dir_with_genome_fa/
   OR
-$ ./cnvnator -root file.root -his 1000 -chrom chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY
+$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y -fasta file_genome.fa.gz
+  OR
+$ ./cnvnator -root file.root -his 1000 -chrom chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY -fasta file_genome.fa.gz
 
 # Calculate statistics
-$ ./cnvnator -root file.root -stat 1000 -d dir_with_genome_fa/
+$ ./cnvnator -root file.root -stat 1000 
 
 # Partition
 $ ./cnvnator -root file.root -partition 1000
