@@ -1159,6 +1159,9 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
   for (int c = 0;c < n_chroms;c++) {
     string chrom   = user_chroms[c];
     string name    = chrom;
+    
+    
+    
     TH1 *h_unique  = getHistogram(getUSignalName(name,bin_size));
     TH1 *h_all     = getHistogram(getSignalName(name,bin_size,false,false));
     TH1 *his       = getHistogram(getSignalName(name,bin_size,
@@ -1359,6 +1362,208 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
     delete[] flags;
   }
 }
+
+void HisMaker::callSVsSignal(int bin, string signal, unsigned int flags,string *user_chroms,int n_chroms,double delta)
+{
+  string chr_names[N_CHROM_MAX] = {""};
+  if (user_chroms == NULL && n_chroms != 0) {
+    cerr<<"No chromosome names given."<<endl
+    <<"Aborting calling."<<endl;
+    return;
+  }
+  
+  if (n_chroms == 0 || (n_chroms == 1 && user_chroms[0] == "")) {
+    n_chroms = getChromNamesWithHis(chr_names,false,true);
+    if (n_chroms < 0) return;
+    if (n_chroms == 0) {
+      cerr<<"Can't find any histograms."<<endl;
+      return;
+    }
+    callSVsSignal(bin,signal,flags,chr_names,n_chroms,delta);
+    return;
+  }
+  
+  for (int c = 0;c < n_chroms;c++) {
+    
+    string chrom   = user_chroms[c];
+    string name    = chrom;
+    unsigned int cflags=Genome::isSexChrom(name)?flags|FLAG_SEX:flags;
+    
+    cout << "Call SVs for signal: " << io.signalName(chrom, bin, signal, cflags) << endl;
+    cout << "with partition: " << io.signalName(chrom, bin, signal+" partition", cflags) << endl;
+    
+    TH1 *his     = io.getSignal(chrom, bin, signal, cflags);
+    TH1 *partition = io.getSignal(chrom, bin, signal+" partition", cflags);
+    if (!his || !partition) {
+      cerr<<"Can't find all histograms for '"<<chrom<<"'."<<endl;
+      return;
+    }
+    
+    cout<<"Call SVs using signal for '"<<chrom <<"' with bin size of "<<bin_size<<" ..."<<endl;
+    
+    
+    TString hname = his->GetName();
+    TH1 *merge = (TH1*)his->Clone(hname + "_call");
+    
+    double mean,sigma;
+    getMeanSigma(his,mean,sigma);
+    
+    int n_bins = partition->GetNbinsX();
+    double *level = new double[n_bins],*rd = new double[n_bins];
+    char   *flags = new char[n_bins];
+    for (int b = 0;b < n_bins;b++) {
+      rd[b]    = his->GetBinContent(b + 1);
+      level[b] = partition->GetBinContent(b + 1);
+      flags[b] = ' ';
+    }
+    
+    double cut = mean*delta;
+    
+    while (mergeLevels(level,n_bins,cut)) ;
+    
+    // Initial region identification
+    double min = mean - cut;
+    double max = mean + cut;
+    for (int b = 0;b < n_bins;b++) {
+      int b0 = b;
+      int bs = b;
+      while (b < n_bins && level[b] < min) b++;
+      int be = b - 1;
+      if (be > bs && adjustToEValue(mean,sigma,rd,n_bins,bs,be,CUTOFF_REGION))
+        for (int i = bs;i <= be;i++) flags[i] = 'D';
+      bs = b;
+      while (b < n_bins && level[b] > max) b++;
+      be = b - 1;
+      if (be > bs && adjustToEValue(mean,sigma,rd,n_bins,bs,be,CUTOFF_REGION))
+        for (int i = bs;i <= be;i++) flags[i] = 'A';
+      if (b > b0) b--;
+    }
+    
+    // Merging with short regions
+    int n_add = 1;
+    //while (n_add > 0) {
+    while (delta < 0.25 && n_add > 0) { // Temporary for developing the usage of AIB
+      for (int b = 0;b < n_bins;b++) {
+        
+        if (flags[b] != ' ') continue;
+        
+        int s = b;
+        while (b < n_bins && flags[b] == ' ') b++;
+        int e = b - 1;
+        
+        if (e < s || s == 0 || e >= n_bins) continue;
+        if (flags[s - 1] != flags[e + 1]) continue;
+        if (s == e) { flags[s] = flags[s - 1]; continue; }
+        
+        int le = s - 1,ls = le;
+        while (ls >= 0 && flags[ls] == flags[le]) ls--; ls++;
+        int rs = e + 1,re = rs;
+        while (re < n_bins && flags[re] == flags[rs]) re++; re--;
+        
+        double average,variance;
+        double raverage,rvariance;
+        double laverage,lvariance;
+        int n,rn,ln;
+        getAverageVariance(rd, s, e, average, variance, n);
+        getAverageVariance(rd,rs,re,raverage,rvariance,rn);
+        getAverageVariance(rd,ls,le,laverage,lvariance,ln);
+        if (n > rn || n > ln) continue;
+        
+        if (testTwoRegions(laverage,lvariance,ln,average,variance,n,
+                           GENOME_SIZE_CNV) < CUTOFF_TWO_REGIONS &&
+            testTwoRegions(raverage,rvariance,rn,average,variance,n,
+                           GENOME_SIZE_CNV) < CUTOFF_TWO_REGIONS)
+          continue;
+        
+        for (int i = s;i <= e;i++) flags[i] = 'C';
+      }
+      
+      n_add = 0;
+      for (int i = 0;i <= n_bins;i++)
+        if (flags[i] == 'C') {
+          flags[i] = flags[i - 1];
+          n_add++;
+        }
+    }
+    
+    // Additional deletions
+    for (int b = 0;b < n_bins;b++) {
+      if (flags[b] != ' ') continue;
+      int bs = b;
+      while (b < n_bins && level[b] < min) b++;
+      int be = b - 1;
+      if (be > bs) {
+        if (gaussianEValue(mean,sigma,rd,bs,be) < CUTOFF_REGION)
+          for (int i = bs;i <= be;i++) flags[i] = 'd';
+        b--;
+      }
+    }
+    
+    
+    // Filling and saving histograms
+    for (int b = 0;b < n_bins;b++) {
+      int b0 = b, n = 0;
+      double lev = 0,tmp = level[b];
+      while (b < n_bins && sameLevel(level[b],tmp)) { lev += rd[b]; n++; b++; }
+      lev *= getInverse(n);
+      rd_level_merge->Fill(lev);
+      b--;
+    }
+    
+    for (int b = 0;b < n_bins;b++) {
+      int b0 = b, n = 0;
+      char c = flags[b];
+      double lev = 0;
+      while (b < n_bins  && flags[b] == c) { lev += rd[b]; n++; b++; }
+      lev *= getInverse(n);
+      while (b0 < b) {
+        level[b0++] = lev;
+        merge->SetBinContent(b0,lev);
+      }
+      b--;
+    }
+    
+    writeHistogramsToBinDir(rd_level_merge,merge);
+    
+    // Making calls
+    for (int b = 0;b < n_bins;b++) {
+      char c = flags[b];
+      if (c == ' ') continue;
+      int bs = b;
+      double cnv = 0;
+      while (b < n_bins && flags[b] == c) cnv += rd[b++];
+      int be = --b;
+      
+      if (be <= bs) continue;
+      
+      cnv /= (be - bs + 1)*mean;
+      TString type = "???";
+      if (c == 'D' || c == 'd')      type = "deletion";
+      else if (c == 'A' || c == 'a') type = "duplication";
+      int start  = bs*bin_size + 1;
+      int end    = (be + 1)*bin_size;
+      double size = end - start + 1;
+      double e  = getEValue(mean,sigma,rd,bs,be);
+      double e2 = gaussianEValue(mean,sigma,rd,bs,be);
+      double e3 = 1,e4 = 1;
+      int add = int(1000./bin_size + 0.5);
+      if (bs + add < be - add) {
+        e3 = getEValue(mean,sigma,rd,bs + add,be - add);
+        e4 = gaussianEValue(mean,sigma,rd,bs + add,be - add);
+      }
+      double n_reads_all = 0,n_reads_unique = 0;
+      double q0 = -1;
+      if (n_reads_all > 0) q0 = (n_reads_all - n_reads_unique)/n_reads_all;
+      cout<<type<<"\t"<<chrom<<":"<<start<<"-"<<end<<"\t"
+      <<size<<"\t"<<cnv<<"\t"<<e<<"\t"<<e2<<"\t"
+      <<e3<<"\t"<<e4<<"\t"<<q0<<endl;
+    }
+    delete[] rd;
+    delete[] level;
+    delete[] flags;
+  }
+}
+
 
 void HisMaker::getMeanSigma(TH1 *his,double &mean,double &sigma,bool dofit)
 {
@@ -5111,6 +5316,201 @@ void HisMaker::produceBAF(string *user_chroms,int n_chroms,bool useGCcorr,
   delete dist_i3_sex;
   delete dist_i4_sex;
 }
+
+void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool useHaplotype,bool useid,bool usemask)
+{
+ 
+  unsigned int snpflag=(usemask?FLAG_USEMASK:0)|(useid?FLAG_USEID:0)|(useHaplotype?FLAG_USEHAP:0);
+  unsigned int rdflag=useGCcorr?FLAG_GC_CORR:0;
+  
+  double pdec=0.9;
+  double pmin=0.001;
+  int minc=2;
+  int minbs=2;
+  
+  string chrom_names[N_CHROM_MAX];
+  int    chrom_lens[N_CHROM_MAX];
+  if (n_chroms == 0 || (n_chroms == 1 && user_chroms[0] == "")) {
+    n_chroms = io.getChromNamesWithTree(chrom_names,true);
+    user_chroms = chrom_names;
+  }
+
+  for (int c = 0;c < n_chroms;c++) {
+    string chrom = user_chroms[c];
+    chrom_lens[c] = io.lenChromWithTree(chrom);
+    if(io.lenChromWithTree(chrom,true)<0) {
+      cout << "There is no VAR tree for chromosome: " << chrom << ". Skiping ..." <<endl;
+      continue;
+    }
+    TTree *tree = io.getTree(chrom,"SNP");
+    int org_len = chrom_lens[c];
+    if(org_len<0) {
+      cout << "There is no RD tree for chromosome: " << chrom << ". Using last SNP postition for chromosome length ..." <<endl;
+      org_len=tree->GetMaximum("position");
+      cout<<org_len<<endl;
+    }
+
+    
+    if (org_len <= 0) continue;
+    int n_bins = org_len/bin_size + 1;
+    int len = n_bins*bin_size;
+    
+    TH1 *his_bafc=io.getSignal(chrom,bin_size,"SNP count",snpflag);
+    TH2 *his_likelihood=(TH2*)io.getSignal(chrom,bin_size,"SNP likelihood",snpflag);
+    int nx=his_likelihood->GetXaxis()->GetNbins();
+    int ny=his_likelihood->GetYaxis()->GetNbins();
+    TH2 *his_likelihood_call=io.newSignalTH2("Likelihood call signal",chrom,bin_size,"SNP likelihood call",snpflag,n_bins,0,len,ny,0,1);
+    
+    for(int i=0;i<nx;i++)
+      for(int j=0;j<ny;j++)
+        his_likelihood_call->SetBinContent(i,j,his_likelihood->GetBinContent(i,j));
+    vector<int> segstart;
+    vector<int> segend;
+    vector<double> pval;
+
+    for(int i=0;i<nx;i++) {
+      double s=0;
+      for(int j=0;j<ny;j++) s+=his_likelihood->GetBinContent(i,j);
+      if((his_bafc->GetBinContent(i)>minc) && (s!=0)) {
+        segstart.push_back(i);
+        segend.push_back(i);
+      }
+    }
+    for(int i=0;i<(segstart.size()-1);i++) {
+      double s=0;
+      for(int j=0;j<(ny);j++) {
+        double lh1=his_likelihood_call->GetBinContent(segstart[i],j);
+        double lh2=his_likelihood_call->GetBinContent(segstart[i+1],j);
+        s+=(lh1<lh2)?lh1:lh2;
+      }
+      pval.push_back(s);
+    }
+    
+    while(pval.size()>0) {
+      double maxp=0;
+      for(int i=0;i<pval.size();i++) if(pval[i]>maxp) maxp=pval[i];
+      double minp=maxp*pdec;
+      if(minp<pmin) minp=pmin;
+      if(maxp<pmin) break;
+      int i=0;
+      
+      while(i<pval.size()) {
+        if(pval[i]>minp) {
+          double tlh[ny];
+          double ss=0;
+          for(int j=0;j<ny;j++) tlh[j]=0;
+          for(int j=0;j<ny;j++) {
+            tlh[j]=his_likelihood_call->GetBinContent(segstart[i],j)*his_likelihood_call->GetBinContent(segstart[i+1],j);
+            ss+=tlh[j];
+          }
+          for(int j=0;j<ny;j++) tlh[j]/=ss;
+          for(int ii=segstart[i];ii<=segend[i];ii++) for(int j=0;j<ny;j++) his_likelihood_call->SetBinContent(ii,j,tlh[j]);
+          for(int ii=segstart[i+1];ii<=segend[i+1];ii++) for(int j=0;j<ny;j++) his_likelihood_call->SetBinContent(ii,j,tlh[j]);
+          segend[i]=segend[i+1];
+          segstart.erase(segstart.begin()+i+1);
+          segend.erase(segend.begin()+i+1);
+          pval.erase(pval.begin()+i);
+          double s=0;
+          for(int j=0;j<(ny);j++) {
+            double lh1=his_likelihood_call->GetBinContent(segstart[i],j);
+            double lh2=his_likelihood_call->GetBinContent(segstart[i+1],j);
+            s+=(lh1<lh2)?lh1:lh2;
+          }
+          pval[i]=s;
+          if(i>0) {
+            s=0;
+            for(int j=0;j<(ny);j++) {
+              double lh1=his_likelihood_call->GetBinContent(segstart[i-1],j);
+              double lh2=his_likelihood_call->GetBinContent(segstart[i],j);
+              s+=(lh1<lh2)?lh1:lh2;
+            }
+            pval[i-1]=s;
+          }
+          
+        } else i++;
+      }
+    }
+    
+    for(int i=0;i<segstart.size();i++) if((segend[i]-segstart[i])<minbs) {
+      segstart.erase(segstart.begin()+i);
+      segend.erase(segend.begin()+i);
+      if(i<(segstart.size()-1)) {
+        pval.erase(pval.begin()+i);
+        if(i>0) {
+          double s=0;
+          for(int j=0;j<(ny);j++) {
+            double lh1=his_likelihood_call->GetBinContent(segstart[i-1],j);
+            double lh2=his_likelihood_call->GetBinContent(segstart[i],j);
+            s+=(lh1<lh2)?lh1:lh2;
+          }
+          pval[i-1]=s;
+        }
+      } else if(i>0) pval.erase(pval.begin()+i-1);
+    }
+    
+    while(pval.size()>0) {
+      double maxp=0;
+      for(int i=0;i<pval.size();i++) if(pval[i]>maxp) maxp=pval[i];
+      double minp=maxp*pdec;
+      if(minp<pmin) minp=pmin;
+      if(maxp<pmin) break;
+      int i=0;
+      
+      while(i<pval.size()) {
+        if(pval[i]>minp) {
+          double tlh[ny];
+          double ss=0;
+          for(int j=0;j<ny;j++) tlh[j]=0;
+          for(int j=0;j<ny;j++) {
+            tlh[j]=his_likelihood_call->GetBinContent(segstart[i],j)*his_likelihood_call->GetBinContent(segstart[i+1],j);
+            ss+=tlh[j];
+          }
+          for(int j=0;j<ny;j++) tlh[j]/=ss;
+          for(int ii=segstart[i];ii<=segend[i];ii++) for(int j=0;j<ny;j++) his_likelihood_call->SetBinContent(ii,j,tlh[j]);
+          for(int ii=segstart[i+1];ii<=segend[i+1];ii++) for(int j=0;j<ny;j++) his_likelihood_call->SetBinContent(ii,j,tlh[j]);
+          segend[i]=segend[i+1];
+          segstart.erase(segstart.begin()+i+1);
+          segend.erase(segend.begin()+i+1);
+          pval.erase(pval.begin()+i);
+          double s=0;
+          for(int j=0;j<(ny);j++) {
+            double lh1=his_likelihood_call->GetBinContent(segstart[i],j);
+            double lh2=his_likelihood_call->GetBinContent(segstart[i+1],j);
+            s+=(lh1<lh2)?lh1:lh2;
+          }
+          pval[i]=s;
+          if(i>0) {
+            s=0;
+            for(int j=0;j<(ny);j++) {
+              double lh1=his_likelihood_call->GetBinContent(segstart[i-1],j);
+              double lh2=his_likelihood_call->GetBinContent(segstart[i],j);
+              s+=(lh1<lh2)?lh1:lh2;
+            }
+            pval[i-1]=s;
+          }
+          
+        } else i++;
+      }
+    }
+    
+    for(int i=0;i<segstart.size();i++) if((segend[i]-segstart[i])>=minbs) {
+      double bafm=0;
+      int bafmp=ny/2+1;
+      for(int j=0;j<(ny);j++) if(his_likelihood_call->GetBinContent(segstart[i],j)>bafm) {bafm=his_likelihood_call->GetBinContent(segstart[i],j);bafmp=j;}
+      cout << chrom << " " << segstart[i]*bin_size <<  " " <<  segend[i]*bin_size << " " << his_likelihood_call->GetBinContent(segstart[i],ny/2+1)/bafm << " " << 1.0*(bafmp)/(ny) << endl;
+    }
+
+
+    // Writing chromosome specific histograms
+    io.writeHistogramsToBinDir(bin_size,his_likelihood_call);
+
+    delete his_bafc;
+    delete his_likelihood;
+    delete his_likelihood_call;
+  }
+
+}
+
 
 void HisMaker::producePartitionBAF(string *user_chroms,int n_chroms,bool useGCcorr,
                                    bool useHaplotype,bool useid,bool usemask,int res) {

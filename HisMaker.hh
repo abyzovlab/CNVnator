@@ -143,6 +143,8 @@ public:
                   bool useHaplotype,bool useid,bool usemask,int res=201);
   void producePartitionBAF(string *chrom,int n_chroms,bool useGCcorr,
                   bool useHaplotype,bool useid,bool usemask,int res=201);
+  void callBAF(string *chrom,int n_chroms,bool useGCcorr,
+                  bool useHaplotype,bool useid,bool usemask);
   void mergeTrees(string *user_chroms,int n_chroms,
 		  string *user_files,int n_files);
   void produceHistograms(string *chrom,int n_chroms,
@@ -167,6 +169,7 @@ public:
   void partitionSignal2D(int bin, string signal1, string signal2, unsigned int flags, string *user_chroms,int n_chroms,int range);
   void callSVs(string *user_chroms,int n_chroms,bool useATcorr,bool useGCcorr,
 	       double delta);
+  void callSVsSignal(int bin, string signal, unsigned int flags,string *user_chroms,int n_chroms,double delta);
   void pe(string *bamss,int n_files,double over,double qual);
   void pe_for_file(string file,
 		   string *bams,int n_files,double over,double qual);

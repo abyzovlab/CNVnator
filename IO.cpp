@@ -15,12 +15,17 @@ const vector<string> IO::Signal = vector<string>({
   "SNP count",
   "SNP baf",
   "SNP maf",
+  "SNP likelihood",
   "SNP i1",
   "SNP i2",
   "SNP i3",
   "SNP i4",
+  "SNP likelihood partition",
   "SNP maf partition",
   "SNP i1 partition",
+  "SNP likelihood call",
+  "SNP maf call",
+  "SNP i1 call",
 });
 
 // Distribution use same signal name + " dist"
@@ -134,6 +139,20 @@ TString IO::signalName(string chr, int bin, string signal, int unsigned flags) {
     if(flags&FLAG_USEID) ret += "_id";
     if(flags&FLAG_USEHAP) ret += "_hap";
     return ret;
+  } else if(signal=="SNP maf partition") {
+    ret = "snp_maf_"+chr+"_";
+    ret += to_string(bin);
+    if(flags&FLAG_USEMASK) ret += "_mask";
+    if(flags&FLAG_USEID) ret += "_id";
+    if(flags&FLAG_USEHAP) ret += "_hap";
+    return ret+"_partition";
+  } else if(signal=="SNP maf call") {
+    ret = "snp_maf_"+chr+"_";
+    ret += to_string(bin);
+    if(flags&FLAG_USEMASK) ret += "_mask";
+    if(flags&FLAG_USEID) ret += "_id";
+    if(flags&FLAG_USEHAP) ret += "_hap";
+    return ret+"_call";
   } else if(signal=="SNP likelihood") {
     ret = "snp_likelihood_"+chr+"_";
     ret += to_string(bin);
@@ -141,6 +160,20 @@ TString IO::signalName(string chr, int bin, string signal, int unsigned flags) {
     if(flags&FLAG_USEID) ret += "_id";
     if(flags&FLAG_USEHAP) ret += "_hap";
     return ret;
+  } else if(signal=="SNP likelihood partition") {
+    ret = "snp_likelihood_"+chr+"_";
+    ret += to_string(bin);
+    if(flags&FLAG_USEMASK) ret += "_mask";
+    if(flags&FLAG_USEID) ret += "_id";
+    if(flags&FLAG_USEHAP) ret += "_hap";
+    return ret+"_partition";
+  } else if(signal=="SNP likelihood call") {
+    ret = "snp_likelihood_"+chr+"_";
+    ret += to_string(bin);
+    if(flags&FLAG_USEMASK) ret += "_mask";
+    if(flags&FLAG_USEID) ret += "_id";
+    if(flags&FLAG_USEHAP) ret += "_hap";
+    return ret+"_call";
   } else if(signal=="SNP i1") {
     ret = "snp_i1_"+chr+"_";
     ret += to_string(bin);
@@ -155,6 +188,13 @@ TString IO::signalName(string chr, int bin, string signal, int unsigned flags) {
     if(flags&FLAG_USEID) ret += "_id";
     if(flags&FLAG_USEHAP) ret += "_hap";
     return ret+"_partition";
+  } else if(signal=="SNP i1 call") {
+    ret = "snp_i1_"+chr+"_";
+    ret += to_string(bin);
+    if(flags&FLAG_USEMASK) ret += "_mask";
+    if(flags&FLAG_USEID) ret += "_id";
+    if(flags&FLAG_USEHAP) ret += "_hap";
+    return ret+"_call";
   } else if(signal=="SNP i2") {
     ret = "snp_i2_"+chr+"_";
     ret += to_string(bin);

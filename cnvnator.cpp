@@ -101,6 +101,7 @@ int main(int argc,char *argv[])
   static const int OPT_IDVAR = 0x50002;
   static const int OPT_MASK = 0x50003;
   static const int OPT_BAF = 0x50004;
+  static const int OPT_CALLBAF = 0x50005;
 
   static const int OPT_CPTREES = 0x60001;
   static const int OPT_LS = 0x60002;
@@ -148,7 +149,7 @@ int main(int argc,char *argv[])
 	       option == "-epartition" || option == "-spartition"  ||
 	       option == "-call"       || option == "-view"        || option == "-viewer"        ||
 	       option == "-genotype"   || option == "-aggregate"   ||
-         option == "-baf") {
+         option == "-baf"        || option == "-callbaf") {
       int bs = 0;
       if (index < argc && argv[index][0] != '-') {
 	TString tmp = argv[index++];
@@ -167,6 +168,7 @@ int main(int argc,char *argv[])
       if (option == "-epartition")  opts[n_opts] = OPT_EPARTITION;
       if (option == "-spartition")  opts[n_opts] = OPT_SPARTITION;
       if (option == "-call")        opts[n_opts] = OPT_CALL;
+      if (option == "-callbaf")        opts[n_opts] = OPT_CALLBAF;
       if (option == "-view")        opts[n_opts] = OPT_VIEW;
       if (option == "-viewer")        opts[n_opts] = OPT_VIEWER;
       if (option == "-genotype")    opts[n_opts] = OPT_GENOTYPE;
@@ -382,8 +384,15 @@ int main(int argc,char *argv[])
       maker.partition(chroms,n_chroms,false,useATcorr,useGCcorr,true,range);
     }
     if (option == OPT_CALL) { // call
+      unsigned int flag=(usemask?FLAG_USEMASK:0)|(useid?FLAG_USEID:0)|(useHaplotype?FLAG_USEHAP:0)|(useGCcorr?FLAG_GC_CORR:0);
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
-      maker.callSVs(chroms,n_chroms,useATcorr,useGCcorr,deltaAF);
+      if(signal=="") maker.callSVs(chroms,n_chroms,useATcorr,useGCcorr,deltaAF);
+      else maker.callSVsSignal(bin,signal,flag,chroms,n_chroms,deltaAF);
+    }
+    if (option == OPT_CALLBAF) { // callbaf
+      unsigned int flag=(usemask?FLAG_USEMASK:0)|(useid?FLAG_USEID:0)|(useHaplotype?FLAG_USEHAP:0)|(useGCcorr?FLAG_GC_CORR:0);
+      HisMaker maker(out_root_file,bin,useGCcorr,genome);
+      maker.callBAF(chroms,n_chroms,useGCcorr,useHaplotype,useid,usemask);
     }
     if (option == OPT_VIEW) { // view
       HisMaker maker(out_root_file,bin,useGCcorr,genome);
