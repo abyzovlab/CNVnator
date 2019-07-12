@@ -5325,7 +5325,7 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
   unsigned int rdflag=useGCcorr?FLAG_GC_CORR:0;
   
   double pdec=0.90;
-  double pmin=0.01;
+  double pmin=0.001;
   int minc=2;
   int minbs=10;
   
