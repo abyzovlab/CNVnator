@@ -9,6 +9,7 @@
 #include "Math/Math.h"
 #include "Math/SpecFuncMathCore.h"
 #include <limits>
+#include <iomanip>
 
 #ifdef USE_YEPPP
 #include <yepCore.h>
@@ -5323,10 +5324,10 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
   unsigned int snpflag=(usemask?FLAG_USEMASK:0)|(useid?FLAG_USEID:0)|(useHaplotype?FLAG_USEHAP:0);
   unsigned int rdflag=useGCcorr?FLAG_GC_CORR:0;
   
-  double pdec=0.9;
-  double pmin=0.001;
+  double pdec=0.90;
+  double pmin=0.01;
   int minc=2;
-  int minbs=2;
+  int minbs=10;
   
   string chrom_names[N_CHROM_MAX];
   int    chrom_lens[N_CHROM_MAX];
@@ -5410,15 +5411,17 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
           segstart.erase(segstart.begin()+i+1);
           segend.erase(segend.begin()+i+1);
           pval.erase(pval.begin()+i);
-          double s=0;
-          for(int j=0;j<(ny);j++) {
-            double lh1=his_likelihood_call->GetBinContent(segstart[i],j);
-            double lh2=his_likelihood_call->GetBinContent(segstart[i+1],j);
-            s+=(lh1<lh2)?lh1:lh2;
+          if(i!=pval.size()) {
+            double s=0;
+            for(int j=0;j<(ny);j++) {
+              double lh1=his_likelihood_call->GetBinContent(segstart[i],j);
+              double lh2=his_likelihood_call->GetBinContent(segstart[i+1],j);
+              s+=(lh1<lh2)?lh1:lh2;
+            }
+            pval[i]=s;
           }
-          pval[i]=s;
           if(i>0) {
-            s=0;
+            double s=0;
             for(int j=0;j<(ny);j++) {
               double lh1=his_likelihood_call->GetBinContent(segstart[i-1],j);
               double lh2=his_likelihood_call->GetBinContent(segstart[i],j);
@@ -5426,7 +5429,7 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
             }
             pval[i-1]=s;
           }
-          
+          i++;
         } else i++;
       }
     }
@@ -5472,15 +5475,17 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
           segstart.erase(segstart.begin()+i+1);
           segend.erase(segend.begin()+i+1);
           pval.erase(pval.begin()+i);
-          double s=0;
-          for(int j=0;j<(ny);j++) {
-            double lh1=his_likelihood_call->GetBinContent(segstart[i],j);
-            double lh2=his_likelihood_call->GetBinContent(segstart[i+1],j);
-            s+=(lh1<lh2)?lh1:lh2;
+          if(i!=pval.size()) {
+            double s=0;
+            for(int j=0;j<(ny);j++) {
+              double lh1=his_likelihood_call->GetBinContent(segstart[i],j);
+              double lh2=his_likelihood_call->GetBinContent(segstart[i+1],j);
+              s+=(lh1<lh2)?lh1:lh2;
+            }
+            pval[i]=s;
           }
-          pval[i]=s;
           if(i>0) {
-            s=0;
+            double s=0;
             for(int j=0;j<(ny);j++) {
               double lh1=his_likelihood_call->GetBinContent(segstart[i-1],j);
               double lh2=his_likelihood_call->GetBinContent(segstart[i],j);
@@ -5488,22 +5493,70 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
             }
             pval[i-1]=s;
           }
-          
+          i++;
         } else i++;
       }
     }
+    
+    
+    double bg_rd=0;
+    int bg_rd_count=0;
+    TH1 *his_rd=io.getSignal(chrom,bin_size,"RD call",rdflag);
+    if(his_rd) {
+      for(int i=0;i<segstart.size();i++) if((segend[i]-segstart[i])>=minbs) {
+        double bafm=0;
+        int bafmp=ny/2+1;
+        for(int j=0;j<(ny);j++) if(his_likelihood_call->GetBinContent(segstart[i],j)>bafm) {bafm=his_likelihood_call->GetBinContent(segstart[i],j);bafmp=j;}
+        if (his_likelihood_call->GetYaxis()->GetBinCenter(bafmp)==0.5) for(int ii=segstart[i];ii<=segend[i];ii++) {
+          if(his_rd->GetBinContent(ii)>0) {
+            bg_rd_count++;
+            bg_rd+=his_rd->GetBinContent(ii);
+          }
+        }
+      }
+    }
+    if(bg_rd_count>0) bg_rd/=bg_rd_count;
     
     for(int i=0;i<segstart.size();i++) if((segend[i]-segstart[i])>=minbs) {
       double bafm=0;
       int bafmp=ny/2+1;
       for(int j=0;j<(ny);j++) if(his_likelihood_call->GetBinContent(segstart[i],j)>bafm) {bafm=his_likelihood_call->GetBinContent(segstart[i],j);bafmp=j;}
-      cout << chrom << " " << segstart[i]*bin_size <<  " " <<  segend[i]*bin_size << " " << his_likelihood_call->GetBinContent(segstart[i],ny/2+1)/bafm << " " << 1.0*(bafmp)/(ny) << endl;
+      double rd=0;
+      int rd_count=0;
+      if (his_likelihood_call->GetYaxis()->GetBinCenter(bafmp)!=0.5) {
+        if(his_rd) {
+          for(int ii=segstart[i];ii<=segend[i];ii++) {
+            rd_count++;
+            rd+=his_rd->GetBinContent(ii);
+          }
+          rd/=rd_count;
+
+          double cnv=rd/bg_rd;
+          double baf=his_likelihood_call->GetYaxis()->GetBinCenter(bafmp);
+          if((1-baf)<baf) baf=1-baf;
+          double f_del=(2*baf-1)/(baf-1);
+          double f_dup=(1-2*baf)/baf;
+          double f_cnnloh=(1-2*baf);
+
+          string type="cnnloh     ";
+          if(rd<(0.95*bg_rd)) type="deletion   ";
+          if(rd>(1.05*bg_rd)) type="duplication";
+
+          cout << type << "\t" << chrom << ":" << segstart[i]*bin_size <<  "-" <<  segend[i]*bin_size << "\t" << setw(10) <<
+          segend[i]*bin_size - segstart[i]*bin_size << "\t" << setw(10) << cnv << "\t" << setw(10) << baf << "\t" << setw(10) << f_del << "\t" << setw(10) << f_dup << "\t" << setw(10) << f_cnnloh <<
+          "\t" << setw(10) << his_likelihood_call->GetBinContent(segstart[i],ny/2+1)/bafm << endl;
+        } else {
+          cout << "aa" << endl;
+
+        }
+      }
     }
 
 
     // Writing chromosome specific histograms
     io.writeHistogramsToBinDir(bin_size,his_likelihood_call);
 
+    delete his_rd;
     delete his_bafc;
     delete his_likelihood;
     delete his_likelihood_call;
