@@ -5325,9 +5325,11 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
   unsigned int rdflag=useGCcorr?FLAG_GC_CORR:0;
   
   double pdec=0.90;
-  double pmin=0.001;
-  int minc=2;
-  int minbs=10;
+  double pmin=1.0*bin_size/1e7;
+  int minc=bin_size/10000;
+  int minbs=5;
+  
+  
   
   string chrom_names[N_CHROM_MAX];
   int    chrom_lens[N_CHROM_MAX];
@@ -5500,22 +5502,10 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
     
     
     double bg_rd=0;
-    int bg_rd_count=0;
-    TH1 *his_rd=io.getSignal(chrom,bin_size,"RD call",rdflag);
-    if(his_rd) {
-      for(int i=0;i<segstart.size();i++) if((segend[i]-segstart[i])>=minbs) {
-        double bafm=0;
-        int bafmp=ny/2+1;
-        for(int j=0;j<(ny);j++) if(his_likelihood_call->GetBinContent(segstart[i],j)>bafm) {bafm=his_likelihood_call->GetBinContent(segstart[i],j);bafmp=j;}
-        if (his_likelihood_call->GetYaxis()->GetBinCenter(bafmp)==0.5) for(int ii=segstart[i];ii<=segend[i];ii++) {
-          if(his_rd->GetBinContent(ii)>0) {
-            bg_rd_count++;
-            bg_rd+=his_rd->GetBinContent(ii);
-          }
-        }
-      }
-    }
-    if(bg_rd_count>0) bg_rd/=bg_rd_count;
+    double bg_rd_sigma=0;
+    TH1 *his_rd=io.getSignal(chrom,bin_size,"RD",rdflag);
+    TH1 *distall    = getHistogram(getDistrName(Genome::CHRALL,bin_size,false,useGCcorr));
+    if(distall) getMeanSigma(distall,bg_rd,bg_rd_sigma);
     
     for(int i=0;i<segstart.size();i++) if((segend[i]-segstart[i])>=minbs) {
       double bafm=0;
@@ -5546,8 +5536,14 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
           segend[i]*bin_size - segstart[i]*bin_size << "\t" << setw(10) << cnv << "\t" << setw(10) << baf << "\t" << setw(10) << f_del << "\t" << setw(10) << f_dup << "\t" << setw(10) << f_cnnloh <<
           "\t" << setw(10) << his_likelihood_call->GetBinContent(segstart[i],ny/2+1)/bafm << endl;
         } else {
-          cout << "aa" << endl;
-
+          double baf=his_likelihood_call->GetYaxis()->GetBinCenter(bafmp);
+          if((1-baf)<baf) baf=1-baf;
+          double f_del=(2*baf-1)/(baf-1);
+          double f_dup=(1-2*baf)/baf;
+          double f_cnnloh=(1-2*baf);
+          cout << "-" << "\t" << chrom << ":" << segstart[i]*bin_size <<  "-" <<  segend[i]*bin_size << "\t" << setw(10) <<
+          segend[i]*bin_size - segstart[i]*bin_size << "\t" << setw(10) << "-" << "\t" << setw(10) << baf << "\t" << setw(10) << f_del << "\t" << setw(10) << f_dup << "\t" << setw(10) << f_cnnloh <<
+          "\t" << setw(10) << his_likelihood_call->GetBinContent(segstart[i],ny/2+1)/bafm << endl;
         }
       }
     }
