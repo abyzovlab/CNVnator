@@ -48,11 +48,11 @@ class IO:
     }
     
     def __init__(self,root_file):
-    """Class constructor
+        """Class constructor
         Opens root file"""
         try:
             self.file=ROOT.TFile(root_file)
-        except IOError as io:
+        except IOError as ioerror:
             print("File not found!")
 
     def __del__(self):
@@ -119,4 +119,5 @@ if __name__ == '__main__':
     io=IO(sys.argv[1])
     print(io.treeName("1", "SNP"))
     x, y = io.getSignal("1", 10000, "RD partition")
-    print(x, y)
+    print(x,y)
+
