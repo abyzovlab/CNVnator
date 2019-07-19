@@ -1,7 +1,7 @@
 """CNVnator python tools::
-
-ROOT IO class
-"""
+    
+    ROOT IO class
+    """
 from __future__ import print_function
 
 import ROOT
@@ -15,7 +15,7 @@ FLAG_USEID=0x0200
 FLAG_USEHAP=0x0400
 
 class IO:
-  signals={
+    signals={
     "RD":"his_rd_p_%(chr)s_%(bin_size)d%(rd_flag)s",
     "RD unique":"his_rd_u_%(chr)s_%(bin_size)d%(rd_flag)s",
     "RD raw":"his_rd_p_%(chr)s_%(bin_size)d%(rd_flag)s_raw",
@@ -45,78 +45,78 @@ class IO:
     "SNP i2 call":"snp_i2_%(chr)s_%(bin_size)d%(snp_flag)s_call",
     "SNP i3 call":"snp_i3_%(chr)s_%(bin_size)d%(snp_flag)s_call",
     "SNP i4 call":"snp_i4_%(chr)s_%(bin_size)d%(snp_flag)s_call",
-  }
-  
-  def __init__(self,root_file):
-    """Class constructor
-    Opens root file"""
-    try:
-      self.file=ROOT.TFile(root_file)
-    except IOError as io:
-      print("File not found!")
-
-  def __del__(self):
-    """Class destructor
-    Closes root file"""
-    self.file.Close()
-      
-  def sufix_rd_flag(self,flags):
-    """ Converts binary flags into sufix used in RD signal names """
-    s=""
-    if flags&FLAG_AT_CORR:
-      s+="_AT"
-    if flags&FLAG_GC_CORR:
-      s+="_GC"
-    return s
+}
     
-  def sufix_snp_flag(self,flags):
+    def __init__(self,root_file):
+    """Class constructor
+        Opens root file"""
+    try:
+        self.file=ROOT.TFile(root_file)
+    except IOError as io:
+        print("File not found!")
+
+def __del__(self):
+    """Class destructor
+        Closes root file"""
+            self.file.Close()
+
+        def sufix_rd_flag(self,flags):
+            """ Converts binary flags into sufix used in RD signal names """
+s=""
+    if flags&FLAG_AT_CORR:
+        s+="_AT"
+            if flags&FLAG_GC_CORR:
+                s+="_GC"
+return s
+    
+    def sufix_snp_flag(self,flags):
     """ Converts binary flags into sufix used in SNP signal names """
     s=""
     if flags&FLAG_USEMASK:
-      s+="_mask"
+        s+="_mask"
     if flags&FLAG_USEID:
-      s+="_id"
-    if flags&FLAG_USEHAP:
-      s+="_hap"
+        s+="_id"
+if flags&FLAG_USEHAP:
+    s+="_hap"
     return s
-
-  def sufix_flag(self,flags):
-    """ Converts binary flags into sufix used in distribution names """
+        
+        def sufix_flag(self,flags):
+""" Converts binary flags into sufix used in distribution names """
     s=""
     if flags&FLAG_SEX:
-      s+="_sex"
+        s+="_sex"
     return s
-
-  
-  def treeName(self,chr,signal):
-    """Returns TTree name for chromosome"""
+        
+        
+        def treeName(self,chr,signal):
+"""Returns TTree name for chromosome"""
     if signal=="RD":
-      return chr
+        return chr
     else:
-      return "snp_%s" % chr
+        return "snp_%s" % chr
 
-  def signalName(self,chr,bin_size,signal,flags=FLAG_USEMASK|FLAG_GC_CORR):
+def signalName(self,chr,bin_size,signal,flags=FLAG_USEMASK|FLAG_GC_CORR):
     """Returns TH1 or TH2 name for signal"""
     return self.signals[signal] % {"chr":chr, "bin_size":bin_size, "rd_flag":self.sufix_rd_flag(flags), "snp_flag":self.sufix_snp_flag(flags), "flag":self.sufix_flag(flags)}
 
-  def getTree(self,chr,signal):
-    """ToDo - read tree and return arrays"""
-    return True
+        def getTree(self,chr,signal):
+            """ToDo - read tree and return arrays"""
+return True
 
-  def getSignal(self,chr,bin_size,signal,flags=FLAG_USEMASK|FLAG_GC_CORR):
+def getSignal(self,chr,bin_size,signal,flags=FLAG_USEMASK|FLAG_GC_CORR):
     """Returns 1D histogram: (Xbin_centers, Values) """
     his=self.file.Get("bin_"+str(bin_size)).Get(self.signalName(chr,bin_size,signal,flags))
     print(self.signalName(chr,bin_size,signal,flags))
     print(his)
     n=his.GetSize()
     return [his.GetBinCenter(i) for i in range(n)], [his.GetBinContent(i) for i in range(n)]
-
-  def getSignal2D(self,chr,bin_size,signal,flags=FLAG_USEMASK|FLAG_GC_CORR):
-    """ToDo - Returns 2D histogram: (Xbin_centers, Values) """
-    return True
+        
+        def getSignal2D(self,chr,bin_size,signal,flags=FLAG_USEMASK|FLAG_GC_CORR):
+            """ToDo - Returns 2D histogram: (Xbin_centers, Values) """
+return True
 
 if __name__ == '__main__':
-  io=IO(sys.argv[1])
-  print(io.treeName("1","SNP"))
-  x,y=io.getSignal("1",10000,"RD partition")
-  print(x,y)
+    io=IO(sys.argv[1])
+    print(io.treeName("1","SNP"))
+    x,y=io.getSignal("1",10000,"RD partition")
+    print(x,y)
