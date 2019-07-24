@@ -684,11 +684,12 @@ void HisMaker::generateViewBAF(TString chrom,int start,int end,
     return;
   }
   stringstream sn;
-  sn<<"vcf_"<<chrom;
+  //sn<<"vcf_"<<chrom;
+  sn<<"snp_"<<chrom;
   TTree *vcftree = (TTree*)file.Get(sn.str().c_str());
   if (!vcftree) {
         cerr<<"Can't find VCF tree for chromosome '"<<chrom<<"' in file '"
-      <<root_file_name<<"'."<<endl;
+	    <<root_file_name<<"'."<<endl;
         return;
   }
   if(vcftree) drawHistogramsBAF(chrom,start,end,win,title,pad,his,vcftree);
@@ -3880,10 +3881,36 @@ int findIndex(string *arr,int n,string name)
   return -1;
 }
 
+void HisMaker::produceTreesFrom1BAM(string *user_chroms,int n_chroms,
+				    string user_file,bool lite)
+{
+  AliParser *parser = new AliParser(user_file);
+  for (int i = 0;i < n_chroms;i++) {
+    string chr = user_chroms[i];
+    cout<<"We have chromosome "<<chr<<endl;
+    if (parser->scrollTo(chr,0) < 0) {
+      cout<<"Can't scroll to chromosome "<<chr<<endl;
+      continue;
+    }
+    cout<<"About to parse "<<endl;
+    while (parser->parseRecord()) {
+      if (parser->isUnmapped())  continue;
+      if (parser->isDuplicate()) continue;
+      if (parser->isSecondary()) continue;
+      cout<<"We parsed "<<parser->getChromosome()<<endl;
+      break;
+    }
+  }
+  delete parser;
+}
+
 void HisMaker::produceTrees(string *user_chroms,int n_chroms,
 			    string *user_files,int n_files,
 			    bool lite)
 {
+//   if (n_files == 1 && AliParser::looksLikeBAM(user_files[0]))
+//     return produceTreesFrom1BAM(user_chroms,n_chroms,user_files[0],lite);
+
   string one_string[1] = {""};
   if (user_chroms == NULL) n_chroms = 0;
   if (user_files  == NULL || n_files == 0) {

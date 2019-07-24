@@ -16,9 +16,10 @@ AliParser::AliParser(string fileName,bool loadIndex) : sam(false),
   int len = fileName.length();
   if (len == 0) {
     stdin = true;
-  } else if (fileName.substr(len - 3,3) == "bam" ||
-             fileName.substr(len - 4,4) == "cram") {
-    //cout<<"Assuming BAM file for "<<fileName<<endl;
+//   } else if (fileName.substr(len - 4,4) == ".bam" ||
+//              fileName.substr(len - 5,5) == ".cram") {
+//     cout<<"Assuming BAM file for "<<fileName<<endl;
+  } else if (looksLikeBAM(fileName) || looksLikeCRAM(fileName)) {
     file = samopen(fileName.c_str(),"rb",NULL);
     if (!file) cerr<<"Can't open file '"<<fileName<<"'."<<endl;
     else {
@@ -34,7 +35,8 @@ AliParser::AliParser(string fileName,bool loadIndex) : sam(false),
       index = bam_index_load(fileName.c_str());
       if (!index) cerr<<"Can't load index file for '"<<fileName<<"'."<<endl;
     }
-  } else if (fileName.substr(len - 3,3) == "sam") {
+//   } else if (fileName.substr(len - 4,4) == ".sam") {
+  } else if (looksLikeSAM(fileName)) {
     cout<<"Assuming SAM file ..."<<endl;
     file = samopen(fileName.c_str(),"r",NULL);
     if (!file) cerr<<"Can't open file '"<<fileName<<"'."<<endl;
