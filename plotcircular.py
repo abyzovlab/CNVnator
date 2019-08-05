@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/python
 
 import numpy as np
 import ROOT

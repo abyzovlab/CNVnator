@@ -4,6 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <string>
+#include <vector>
 using namespace std;
 
 // ROOT includes
@@ -28,76 +30,239 @@ using namespace std;
 #include <THashTable.h>
 #include <TGraph.h>
 
-Visualizer::Visualizer(string *_files,int _n_files,int _bin,int _flags) : files(_files),n_files(_n_files),bin(_bin),flags(_flags),canvas(NULL) {
+#include <readline/readline.h>
+#include <readline/history.h>
+
+const vector<string> Visualizer::vocabulary=vector<string>({"set RD", "set RD raw", "set RD partition", "set RD call", "set SNP", "set SNP likelihood", "set SNP likelihood call", "set SNP count", "show", "ls"});
+
+Visualizer::Visualizer(string *_files,int _n_files,int _bin,int _flags) : files(_files),n_files(_n_files),bin(_bin),flags(_flags),main_canvas(NULL) {
   io=new IO*[n_files];
   for(int i=0;i<n_files;i++) io[i]=new IO(files[i]);
+  signals["RD"]=true;
+  signals["RD raw"]=true;
+  signals["RD partition"]=true;
+  signals["RD call"]=true;
+  
+  signals["SNP"]=false;
+  
+  signals["SNP likelihood"]=false;
+  signals["SNP likelihood call"]=false;
+  
+  signals["SNP count"]=false;
+  
+  chroms=vector<string>({"1","15","16","18"});
 }
 
 Visualizer::~Visualizer() {
   
 }
 
+void Visualizer::print_options() {
+  cout << endl;
+  cout << "Panel 1" << endl;
+  cout << "-------" << endl;
+  cout << "  RD " << signals["RD"] << endl;
+  cout << "  RD raw " << signals["RD raw"] << endl;
+  cout << "  RD partition " << signals["RD partition"] << endl;
+  cout << "  RD call " << signals["RD call"] << endl << endl;
+
+  cout << "Panel 2" << endl;
+  cout << "-------" << endl;
+  cout << "  SNP " << signals["SNP"] << endl << endl;
+
+  cout << "Panel 3" << endl;
+  cout << "-------" << endl;
+  cout << "  SNP likelihood " << signals["SNP likelihood"] << endl;
+  cout << "  SNP likelihood call " << signals["SNP likelihood call"] << endl << endl;
+
+  cout << "Panel 4" << endl;
+  cout << "-------" << endl;
+  cout << "  SNP count " << signals["SNP count"] << endl << endl;
+}
+
+void Visualizer::setOption(string signal) {
+  signals[signal]=true;
+  cout << signal << " 1" << endl;
+}
+
+void Visualizer::unsetOption(string signal) {
+  signals[signal]=false;
+  cout << signal << " 0" << endl;
+}
+
+bool Visualizer::panel(int i) {
+  if(i==1) return signals["RD"]||signals["RD row"]||signals["RD partition"]||signals["RD call"];
+  if(i==2) return signals["SNP"];
+  if(i==3) return signals["SNP likelihood"]||signals["SNP likelihood call"];
+  if(i==4) return signals["SNP count"];
+  return false;
+}
+
+int Visualizer::panels() {
+  int ret=0;
+  for(int i=1;i<5;i++) if(panel(i)) ret++;
+  return ret;
+}
+
+int Visualizer::postoi(TString s) {
+  if (s.IsDigit()) return s.Atoi();
+  TString sp = s(0,s.Length() - 1);
+  if (!sp.IsDigit()) return -1;
+  char z = s[s.Length() - 1];
+  if (z == 'M' || z == 'm') sp += "000000";
+  if (z == 'k' || z == 'K') sp += "000";
+  return sp.Atoi();
+}
+
+bool Visualizer::parseRegionOption(TString input,TString &chrom,
+        int &start,int &end,TString &option)
+{
+  string tmp="";
+  istringstream sin(input.Data());
+  sin>>tmp;
+  sin>>option;
+  if(tmp=="") return false;
+  int pos=tmp.find(":");
+  if(pos==string::npos) return false;
+  chrom=tmp.substr(0,pos);
+  tmp.erase(0,pos+1);
+  pos=tmp.find("-");
+  if(pos==string::npos) return false;
+  start=postoi(tmp.substr(0,pos));
+  if(start==-1) return false;
+  tmp.erase(0,pos+1);
+  pos=tmp.find(" ");
+  end=postoi(tmp);
+  if(end==-1) return false;
+  return true;
+}
+
+bool Visualizer::parseCommand(TString input) {
+  string tmp="",tmp1="",sig="";
+  istringstream sin(input.Data());
+  sin>>tmp;
+  while(sin>>tmp1) sig+=tmp1+" ";
+  sig.pop_back();
+  if(tmp=="show") {
+    print_options();
+  } else if(tmp=="set") {
+    setOption(sig);
+    return true;
+  } else if(tmp=="unset") {
+    unsetOption(sig);
+    return true;
+  } else if(tmp=="ls") {
+    for(int i=0;i<n_files;i++) io[i]->ls();
+  } else if(tmp=="gview") {
+    gview();
+  }
+  return false;
+  
+}
+
+char** Visualizer::completer(const char* text, int start, int end) {
+  rl_attempted_completion_over = 1;
+  return rl_completion_matches(text, Visualizer::completion_generator);
+}
+
+char* Visualizer::completion_generator(const char* text, int state) {
+//  std::vector<std::string> vocabulary{"set RD", "set RD raw", "set RD partition", "set RD call", "set SNP", "set SNP likelihood", "set SNP likelihood call", "set SNP count", "show"};
+  static std::vector<std::string> matches;
+  static size_t match_index = 0;
+  if (state == 0) {
+    matches.clear();
+    match_index = 0;
+    std::string textstr = std::string(text);
+    for (auto word : vocabulary) {
+      if (word.size() >= textstr.size() &&
+          word.compare(0, textstr.size(), textstr) == 0) {
+        matches.push_back(word);
+      }
+    }
+  }
+  if (match_index >= matches.size()) {
+    return nullptr;
+  } else {
+    return strdup(matches[match_index++].c_str());
+  }
+  return nullptr;
+}
+
 void Visualizer::prompt() {
   TTimer  *timer = new TTimer("gSystem->ProcessEvents();",50,kFALSE);
-  TString input = "";
+//  TString input = "";
+  string input;
+  char* buf;
+  rl_attempted_completion_function = completer;
+  rl_basic_word_break_characters = (char*)"";
   while (input != "exit" && input != "quit") {
-    string chrom = "",tmp="";
+    TString chrom = "",option="";
     int start,end;
-    istringstream sin(input.Data());
-    sin>>tmp;
-    if(tmp!="") {
-      cout << 1 << endl;
-      int pos=tmp.find(":");
-      chrom=tmp.substr(0,pos);
-      tmp.erase(0,pos+1);
-      pos=tmp.find("-");
-      start=stoi(tmp.substr(0,pos));
-      tmp.erase(0,pos+1);
-      end=stoi(tmp);
-      generateViewBAF(chrom,start,end);
-    }
+    if(!parseCommand(input)) if(parseRegionOption(input,chrom,start,end,option)) generateView(static_cast<string>(chrom),start,end);
     timer->TurnOn();
     timer->Reset();
-    input = Getline(">");
-    input.ReplaceAll("\n","\0");
-    input = input.Remove(TString::kBoth,' ');
+    buf = readline("cnvnator> ");
+    input=string(buf);
+    if(buf!=nullptr) add_history(buf);
+    free(buf);
+//    input = Getline(">");
+//    getline(cin,input);
+//    input.ReplaceAll("\n","\0");
+//    input = input.Remove(TString::kBoth,' ');
     timer->TurnOff();
   }
   delete timer;
 }
 
-void Visualizer::generateViewBAF(string chrom,int start,int end) {
+void Visualizer::gview() {
+//  int n=io[0]->nChromWithTree();
+  int n=chroms.size();
+  TCanvas *canvas = new TCanvas("canv","canv",1000,800);
+  canvas->SetFillColor(kWhite);
+  canvas->SetBorderMode(0); // No borders
+  canvas->Divide(2,2);
+  for(int i=0;i<n;i++) {
+    TVirtualPad *pad = canvas->cd(i+1);
+    cout<< "Chrom: " << chroms[i] << endl;
+    generateView(chroms[i],1,io[0]->lenChromWithTree(chroms[i]),pad);
+  }
+  canvas->cd();
+  canvas->Update();
+}
+
+void Visualizer::generateView(string chrom,int start,int end,TVirtualPad *canvas) {
   int win = 1*(end - start + 1);
   if (win < 10000) win = 10000;
   
-  if (canvas) delete canvas;
+//  if (canvas) delete canvas;
   TStyle *st = new TStyle("st","st");
   st->SetOptStat(false);  // No box with statistics
   st->SetOptTitle(false); // No box with title
   gROOT->SetStyle("st");
-  canvas = new TCanvas("canv","canv",900,900);
+  if(!canvas) canvas = new TCanvas("canv","canv",1000,800);
   canvas->SetFillColor(kWhite);
   canvas->SetBorderMode(0); // No borders
-  canvas->Divide(1,3);
+  canvas->Divide(1,panels());
   
   TString title = chrom; title += ":";
   title += start; title += "-";
   title += end;
   canvas->SetTitle(title);
+  int currp=0;
   
-  TH1 *raw=io[0]->getSignal(chrom,bin,"RD raw",0);
-  TH1 *his=io[0]->getSignal(chrom,bin,"RD",0);
-  TH1 *hisc=io[0]->getSignal(chrom,bin,"RD",flags);
-  TH1 *hisp=io[0]->getSignal(chrom,bin,"RD partition",flags);
-  TH1 *hism=io[0]->getSignal(chrom,bin,"RD call",flags);
-  cout << his << endl;
-  TVirtualPad *pad = canvas->cd(1);
-  pad->SetFillColor(kWhite);
-  pad->SetLineColor(kWhite);
-  pad->SetFrameLineColor(kWhite);
-  pad->SetFrameBorderMode(0);
-  drawHistograms(chrom,start,end,win,"",pad,raw,his,hisc,hisp,hism);
-
+  // Panel 1
+  if(panel(1)) {
+    TH1 *raw=signals["RD raw"]?io[0]->getSignal(chrom,bin,"RD raw",0):NULL;
+    TH1 *his=signals["RD raw"]?io[0]->getSignal(chrom,bin,"RD",0):NULL;
+    TH1 *hisc=signals["RD"]?io[0]->getSignal(chrom,bin,"RD",flags):NULL;
+    TH1 *hisp=signals["RD partition"]?io[0]->getSignal(chrom,bin,"RD partition",flags):NULL;
+    TH1 *hism=signals["RD call"]?io[0]->getSignal(chrom,bin,"RD call",flags):NULL;
+    TVirtualPad *pad = canvas->cd(++currp);
+    pad->SetFillColor(kWhite);
+    pad->SetLineColor(kWhite);
+    pad->SetFrameLineColor(kWhite);
+    pad->SetFrameBorderMode(0);
+    drawHistograms(chrom,start,end,win,"RD",pad,raw,his,hisc,hisp,hism);
 //  if (hisc) {
 //    double mean,sigma;
 //    TH1 *rd_his = getHistogram(getDistrName("chr1",bin_size,
@@ -106,23 +271,35 @@ void Visualizer::generateViewBAF(string chrom,int start,int end) {
 //    hisc->GetYaxis()->SetRangeUser(0,2*mean);
 //    hisc->SetLineWidth(1);
 //  }
+  }
 
-  TH1 *hisl=io[0]->getSignal(chrom,bin,"SNP likelihood",flags);
-  pad = canvas->cd(2);
-  pad->SetFillColor(kWhite);
-  pad->SetLineColor(kWhite);
-  pad->SetFrameLineColor(kWhite);
-  pad->SetFrameBorderMode(0);
-  drawHistogram2D(chrom,start,end,win,"",pad,hisl);
+  if(panel(2)) {
+    TH1 *his=io[0]->getSignal(chrom,bin,"SNP count",flags);
+    TTree *tree=io[0]->getTree(chrom,"SNP");
+    TVirtualPad *pad = canvas->cd(++currp);
+    
+    drawSNP(chrom,start,end,win,"SNP",pad,his,tree);
+  }
   
-  TH1 *hisbaf=io[0]->getSignal(chrom,bin,"SNP i1",flags);
-  TH1 *hisbafc=io[0]->getSignal(chrom,bin,"SNP i1 partition",flags);
-  pad = canvas->cd(3);
-  pad->SetFillColor(kWhite);
-  pad->SetLineColor(kWhite);
-  pad->SetFrameLineColor(kWhite);
-  pad->SetFrameBorderMode(0);
-  drawHistogramsBAF(chrom,start,end,win,"",pad,hisbaf,hisbafc);
+  if(panel(3)) {
+    TH1 *his=signals["SNP likelihood call"]?io[0]->getSignal(chrom,bin,"SNP likelihood call",flags):io[0]->getSignal(chrom,bin,"SNP likelihood",flags);
+    TVirtualPad *pad = canvas->cd(++currp);
+    pad->SetFillColor(kWhite);
+    pad->SetLineColor(kWhite);
+    pad->SetFrameLineColor(kWhite);
+    pad->SetFrameBorderMode(0);
+    drawHistogram2D(chrom,start,end,win,"likelihood",pad,his);
+  }
+
+  if(panel(4)) {
+    TH1 *hisbafc=io[0]->getSignal(chrom,bin,"SNP count",flags);
+    TVirtualPad *pad = canvas->cd(++currp);
+    pad->SetFillColor(kWhite);
+    pad->SetLineColor(kWhite);
+    pad->SetFrameLineColor(kWhite);
+    pad->SetFrameBorderMode(0);
+    drawHistogramsBAF(chrom,start,end,win,"SNP count",pad,hisbafc,NULL);
+  }
 
   canvas->cd();
   canvas->Update();
@@ -239,7 +416,7 @@ void Visualizer::drawHistogramsBAF(TString chrom,int start,int end,
   main->Draw();
   main->GetXaxis()->SetRangeUser(s,e);
   main->GetXaxis()->SetTitle(chrom);
-  main->GetYaxis()->SetRangeUser(0,max);
+  //main->GetYaxis()->SetRangeUser(0,max);
   main->GetYaxis()->SetTitle(title);
   main->SetLineWidth(3);
   if (hisc) {
@@ -257,4 +434,39 @@ void Visualizer::drawHistogramsBAF(TString chrom,int start,int end,
   line1->SetLineWidth(3);
   line2->SetLineWidth(3);
   line1->Draw(); line2->Draw();
+}
+
+void Visualizer::drawSNP(TString chrom,int start,int end,
+                              int win,TString title,
+                              TVirtualPad *pad,
+                              TH1 *main,TTree *vcftree)
+{
+  int s  = start - win, e  = end + win;
+
+  main->Draw();
+  main->GetXaxis()->SetRangeUser(s,e);
+  main->GetXaxis()->SetTitle(chrom);
+  main->GetYaxis()->SetRangeUser(0,1.05);
+  main->GetYaxis()->SetTitle(title);
+  main->SetLineWidth(3);
+  main->SetLineWidth(0);
+
+  vcftree->SetMarkerSize(0.2);
+  vcftree->SetMarkerStyle(21);
+  vcftree->SetMarkerColor(kBlue);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==1 && (flag&2)","same");
+  vcftree->SetMarkerColor(kCyan);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==1 && !(flag&2)","same");
+  vcftree->SetMarkerColor(kRed);
+  vcftree->Draw("nref/(nref+nalt):position","_gt%4==2 && (flag&2)","same");
+  vcftree->SetMarkerColor(kOrange);
+  vcftree->Draw("nref/(nref+nalt):position","_gt%4==2 && !(flag&2)","same");
+  vcftree->SetMarkerColor(kGreen);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==0 && (flag&2)","same");
+  vcftree->SetMarkerColor(kYellow);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==0 && !(flag&2)","same");
+  vcftree->SetMarkerColor(kBlack);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==3 && (flag&2)","same");
+  vcftree->SetMarkerColor(kGray);
+  vcftree->Draw("nalt/(nref+nalt):position","_gt%4==3 && !(flag&2)","same");
 }

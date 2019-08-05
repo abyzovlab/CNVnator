@@ -394,22 +394,25 @@ bool IO::writeHistogramsToBinDir(int bin,TH1 *his1,TH1 *his2,TH1 *his3,TH1 *his4
 }
 
 void IO::ls() {
-  cout << "Root file: " << rootfile << endl;
+  cout << endl << "Root file: " << rootfile << endl << "-------------------" << endl;
   if(rd_tree.size()>0) {
-    cout << "RD TREES:" << endl;
+    cout << "RD TREES:";
     for(int i=0;i<rd_tree.size();i++)
-    cout << "  *" << rd_tree[i] << " [" << rd_tree_len[i] << "]" << endl;
+    cout << ((i==0)?" ":", ") << rd_tree[i];
   }
+  cout << endl << endl;
   if(snp_tree.size()>0) {
-    cout << "SNP TREES:" << endl;
+    cout << "SNP TREES:";
     for(int i=0;i<snp_tree.size();i++)
-    cout << "  *" << snp_tree[i] << " [" << snp_tree_len[i] << "]" << endl;
+    cout << ((i==0)?" ":", ") << snp_tree[i];
   }
+  cout << endl << endl;
   if(bin_dir.size()>0) {
-    cout << "DIRECTORIES FOR BIN SIZES:" << endl;
+    cout << "DIRECTORIES FOR BIN SIZES:";
     for(int i=0;i<bin_dir.size();i++)
-    cout << "  *" << bin_dir[i] << endl;
+    cout << ((i==0)?" ":", ") << bin_dir[i];
   }
+  cout << endl << endl;
 }
 
 void IO::cptrees(string newrootfile,string *user_chroms,int n_chroms) {
