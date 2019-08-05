@@ -142,7 +142,7 @@ bool Visualizer::parseCommand(TString input) {
   istringstream sin(input.Data());
   sin>>tmp;
   while(sin>>tmp1) sig+=tmp1+" ";
-  sig.pop_back();
+  if(sig!="") sig.pop_back();
   if(tmp=="show") {
     print_options();
   } else if(tmp=="set") {
