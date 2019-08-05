@@ -191,14 +191,14 @@ char* Visualizer::completion_generator(const char* text, int state) {
 void Visualizer::prompt() {
   TTimer  *timer = new TTimer("gSystem->ProcessEvents();",50,kFALSE);
 //  TString input = "";
-  string input;
+  string input="";
   char* buf;
   rl_attempted_completion_function = completer;
-  rl_basic_word_break_characters = (char*)"|";
+  rl_basic_word_break_characters = (char*)"";
   while (input != "exit" && input != "quit") {
     TString chrom = "",option="";
     int start,end;
-    if(!parseCommand(input)) if(parseRegionOption(input,chrom,start,end,option)) generateView(static_cast<string>(chrom),start,end);
+    if(input!="") if(!parseCommand(input)) if(parseRegionOption(input,chrom,start,end,option)) generateView(static_cast<string>(chrom),start,end);
     timer->TurnOn();
     timer->Reset();
     buf = readline("cnvnator> ");
