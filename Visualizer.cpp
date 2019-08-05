@@ -194,7 +194,7 @@ void Visualizer::prompt() {
   string input;
   char* buf;
   rl_attempted_completion_function = completer;
-  rl_basic_word_break_characters = (char*)"";
+  rl_basic_word_break_characters = (char*)"|";
   while (input != "exit" && input != "quit") {
     TString chrom = "",option="";
     int start,end;
