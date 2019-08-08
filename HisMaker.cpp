@@ -4762,7 +4762,7 @@ void HisMaker::addVcf(string *user_chroms,int n_chroms,string *user_files,int n_
     if(tgt[2]=='1') tgts+=1;
     if(tgt[1]=='|') tgts+=4;
     vcf_gt.push_back(tgts);
-    vcf_flag.push_back(0);
+    vcf_flag.push_back(2);
     n_placed++;
     prev_chr=chr;
   }
@@ -5320,7 +5320,6 @@ void HisMaker::produceBAF(string *user_chroms,int n_chroms,bool useGCcorr,
 
 void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool useHaplotype,bool useid,bool usemask)
 {
- 
   unsigned int snpflag=(usemask?FLAG_USEMASK:0)|(useid?FLAG_USEID:0)|(useHaplotype?FLAG_USEHAP:0);
   unsigned int rdflag=useGCcorr?FLAG_GC_CORR:0;
   
@@ -5328,8 +5327,6 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
   double pmin=1.0*bin_size/1e7;
   int minc=bin_size/10000;
   int minbs=5;
-  
-  
   
   string chrom_names[N_CHROM_MAX];
   int    chrom_lens[N_CHROM_MAX];
@@ -5353,7 +5350,6 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
       cout<<org_len<<endl;
     }
 
-    
     if (org_len <= 0) continue;
     int n_bins = org_len/bin_size + 1;
     int len = n_bins*bin_size;
@@ -5363,14 +5359,12 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
     int nx=his_likelihood->GetXaxis()->GetNbins();
     int ny=his_likelihood->GetYaxis()->GetNbins();
     TH2 *his_likelihood_call=io.newSignalTH2("Likelihood call signal",chrom,bin_size,"SNP likelihood call",snpflag,n_bins,0,len,ny,0,1);
-    
     for(int i=0;i<nx;i++)
       for(int j=0;j<ny;j++)
         his_likelihood_call->SetBinContent(i,j,his_likelihood->GetBinContent(i,j));
     vector<int> segstart;
     vector<int> segend;
     vector<double> pval;
-
     for(int i=0;i<nx;i++) {
       double s=0;
       for(int j=0;j<ny;j++) s+=his_likelihood->GetBinContent(i,j);
@@ -5379,7 +5373,7 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
         segend.push_back(i);
       }
     }
-    for(int i=0;i<(segstart.size()-1);i++) {
+    for(int i=0;(i+1)<segstart.size();i++) {
       double s=0;
       for(int j=0;j<(ny);j++) {
         double lh1=his_likelihood_call->GetBinContent(segstart[i],j);
@@ -5388,7 +5382,7 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
       }
       pval.push_back(s);
     }
-    
+
     while(pval.size()>0) {
       double maxp=0;
       for(int i=0;i<pval.size();i++) if(pval[i]>maxp) maxp=pval[i];
@@ -5436,6 +5430,8 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
       }
     }
     
+ 
+
     for(int i=0;i<segstart.size();i++) if((segend[i]-segstart[i])<minbs) {
       segstart.erase(segstart.begin()+i);
       segend.erase(segend.begin()+i);
@@ -5452,7 +5448,7 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
         }
       } else if(i>0) pval.erase(pval.begin()+i-1);
     }
-    
+
     while(pval.size()>0) {
       double maxp=0;
       for(int i=0;i<pval.size();i++) if(pval[i]>maxp) maxp=pval[i];
@@ -5499,7 +5495,6 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
         } else i++;
       }
     }
-    
     
     double bg_rd=0;
     double bg_rd_sigma=0;
@@ -5547,7 +5542,6 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
         }
       }
     }
-
 
     // Writing chromosome specific histograms
     io.writeHistogramsToBinDir(bin_size,his_likelihood_call);
