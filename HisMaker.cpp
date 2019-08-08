@@ -5429,8 +5429,6 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
         } else i++;
       }
     }
-    
- 
 
     for(int i=0;i<segstart.size();i++) if((segend[i]-segstart[i])<minbs) {
       segstart.erase(segstart.begin()+i);
