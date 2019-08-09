@@ -5433,7 +5433,7 @@ void HisMaker::callBAF(string *user_chroms,int n_chroms,bool useGCcorr, bool use
     for(int i=0;i<segstart.size();i++) if((segend[i]-segstart[i])<minbs) {
       segstart.erase(segstart.begin()+i);
       segend.erase(segend.begin()+i);
-      if(i<(segstart.size()-1)) {
+      if((i+1)<segstart.size())) {
         pval.erase(pval.begin()+i);
         if(i>0) {
           double s=0;
