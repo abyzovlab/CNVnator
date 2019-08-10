@@ -95,30 +95,40 @@ class IO:
         else:
             return "snp_%s" % chr
 
-    def signalName(self, chr, bin_size, signal, flags=FLAG_USEMASK | FLAG_GC_CORR):
+    def signal_name(self, chr, bin_size, signal, flags=FLAG_USEMASK | FLAG_GC_CORR):
         """Returns TH1 or TH2 name for signal"""
         return self.signals[signal] % {"chr": chr, "bin_size": bin_size, "rd_flag": self.sufix_rd_flag(flags),
                                        "snp_flag": self.sufix_snp_flag(flags), "flag": self.sufix_flag(flags)}
 
-    def getTree(self, chr, signal):
+    def get_chrom_names_with_tree(self,snp=False):
+        iter = self.file.GetListOfKeys();
+        forest=[]
+        for i in iter:
+            if i.GetClassName()=="TTree":
+                name=i.GetName()
+                if snp and name.find("snp_") == 0:
+                    forest.append(name[4:])
+                if (not snp) and name.find("snp_") != 0:
+                    forest.append(name)
+        return forest
+
+
+    def get_tree(self, chr, signal):
         """ToDo - read tree and return arrays"""
         return True
 
-    def getSignal(self, chr, bin_size, signal, flags=FLAG_USEMASK | FLAG_GC_CORR):
+    def get_signal(self, chr, bin_size, signal, flags=FLAG_USEMASK | FLAG_GC_CORR):
         """Returns 1D histogram: (Xbin_centers, Values) """
-        his = self.file.Get("bin_" + str(bin_size)).Get(self.signalName(chr, bin_size, signal, flags))
-        print(self.signalName(chr, bin_size, signal, flags))
-        print(his)
+        his = self.file.Get("bin_" + str(bin_size)).Get(self.signal_name(chr, bin_size, signal, flags))
         n = his.GetSize()
         return [his.GetBinCenter(i) for i in range(n)], [his.GetBinContent(i) for i in range(n)]
 
-    def getSignal2D(self, chr, bin_size, signal, flags=FLAG_USEMASK | FLAG_GC_CORR):
+    def get_signal_2d(self, chr, bin_size, signal, flags=FLAG_USEMASK | FLAG_GC_CORR):
         """ToDo - Returns 2D histogram: (Xbin_centers, Values) """
         return True
 
 
 if __name__ == '__main__':
+    print("main")
     io = IO(sys.argv[1])
-    print(io.treeName("1", "SNP"))
-    x, y = io.getSignal("1", 10000, "RD partition")
-    print(x, y)
+    print(io.get_chrom_names_with_tree(snp=True))

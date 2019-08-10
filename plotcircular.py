@@ -1,142 +1,112 @@
 #!/usr/bin/env python
 
 import numpy as np
-import ROOT
 import argparse
+from pytools.io import IO
 
 parser = argparse.ArgumentParser(description='Plot BAF')
 parser.add_argument("root_file", help="CNVnator root file name")
-parser.add_argument("-chrom","--chromosomes", help="Comma separated chromosom list",default="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22")
+parser.add_argument("-chrom", "--chromosomes", help="Comma separated chromosom list",
+                    default="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22")
 parser.add_argument("-bs", "--binsize", type=int,
-                    help="size of bins", default=1000000)
+                    help="size of bins for SNP signal in root file", default=100000)
 parser.add_argument("-o", "--save_file",
                     help="save plot to file", default=None)
 parser.add_argument("-t", "--title",
                     help="plot title", default=None)
 parser.add_argument("-rdbs", "--rdbinsize", type=int,
-                    help="size of bins for RD signal", default=100000)
+                    help="size of bins for RD signal in root file if different from SNP bin size", default=100000)
+parser.add_argument("-pbs", "--plotbinsize", type=int,
+                    help="plot bin size", default=1000000)
 parser.add_argument('-nomask', help="If not set only SNPs in P mask region will be used", action='store_true')
 parser.add_argument('-useid', help="Use just SNPs that exist in given database", action='store_true')
-parser.add_argument('-oldrootfile', help="Using root file made by CNVnator v0.4 or earlier (SNP tree names starting with vcf_ insted snp_)", action='store_true')
-
-args=parser.parse_args()
+args = parser.parse_args()
 
 if args.save_file:
-  import matplotlib as mpl
-  mpl.use('Agg')
-import matplotlib.pyplot as plt
+    import matplotlib as mpl
+    mpl.use('Agg')
+    import matplotlib.pyplot as plt
+else:
+    import matplotlib.pyplot as plt
 
-chrs=args.chromosomes.split(",")
-bs=args.binsize
-rdbs=args.rdbinsize
+bs = args.binsize
+rdbs = args.rdbinsize
+pbs = args.plotbinsize
 
-f=ROOT.TFile(args.root_file)
+io = IO(args.root_file)
+chroms = io.get_chrom_names_with_tree()
+chrs = [ "chr"+c if ((not c in chroms) and ("chr"+c in chroms)) else c for c in args.chromosomes.split(",")]
 
-baf={}
-count={}
-maxbin={}
-rd={}
-rdcount={}
-ard=0
-act=0
-n=250000000/bs
+bafall = []
+rdall = []
+cstart = {}
+cend = {}
+Nrd=pbs/rdbs
+N=pbs/bs
 for c in chrs:
-  baf[c]=[0 for i in range(n)]
-  count[c]=[0 for i in range(n)]
-  rd[c]=[0 for i in range(n)]
-  rdcount[c]=[0 for i in range(n)]
-  maxbin[c]=0
-  tname="snp_"+c
-  if args.oldrootfile:
-    tname="vcf_"+c
-  t=f.Get(tname)
-  print "Reading SNP for",c,"chromosome..."
-  data=[]
-  for e in t:
-    if (e.nref+e.nalt)>0 and (e._gt==1 or e._gt==5 or e._gt==6) and (args.nomask or e.flag>1) and (e.flag==1 or e.flag==3 or not args.useid):
-      bafv=1.0*e.nalt/(e.nref+e.nalt)
-      baf[c][e.position/bs]+=(1.0-bafv) if bafv<0.5 else bafv
-      count[c][e.position/bs]+=1
-      if (e.position/bs)>maxbin[c]:
-        maxbin[c]=e.position/bs
-  frd=f.Get("bin_"+str(rdbs)).Get("his_rd_p_"+c+"_"+str(rdbs)+"_GC")
-  print "Reading RD for",c,"chromosome..."
-  nrd=frd.GetSize()
-  for i in range(nrd):
-    posb=i*rdbs/bs
-    rd[c][posb]+=frd.GetBinContent(i)
-    rdcount[c][posb]+=1
-    ard+=frd.GetBinContent(i)
-    act+=1
-    if posb>maxbin[c]:
-      maxbin[c]=posb
+    snp=io.get_signal(c, bs, "SNP maf")[1]
+    rd=io.get_signal(c, bs, "RD")[1]
+    cstart[c] = len(rdall)
+    bafall += [sum(snp[n:n+N])/len(snp[n:n+N]) for n in range(0, len(snp), N)]
+    rdall += [sum(rd[n:n+N]) for n in range(0, len(snp), N)]
+    cend[c] = len(rdall)
 
-ard/=act
-bafall=[]
-rdall=[]
-countall=0
-cstart={}
-cend={}
-for c in chrs:
-  cstart[c]=countall
-  for i in range(maxbin[c]+1):
-    if count[c][i]>0:
-      baf[c][i]/=count[c][i]
-    if rdcount[c][i]>0:
-      rd[c][i]/=rdcount[c][i]
-    bafall.append(baf[c][i])
-    rdall.append(rd[c][i])
-  countall+=maxbin[c]+1
-  cend[c]=countall
+mean_rd = sum(rdall) / len(rdall)
 
+dt = 2.0 * np.pi / len(rdall)
+theta = np.arange(0, 2.0 * np.pi, dt)
 
-dt=2.0*np.pi/countall
-theta=np.arange(0,2.0*np.pi,dt)
-  
-
+fig = plt.figure()
 ax = plt.subplot(111, projection='polar')
 
-cc=(0,0,1)
+cc = (0, 0, 1)
 for c in chrs:
-  if cc==(0,0,1):
-    cc=(0,1,0)
-  else:
-    cc=(0,0,1)
-  x=[]
-  y=[]
-  for i in range(cend[c]-cstart[c]):
-    if bafall[cstart[c]+i]>0:
-      x.append(np.pi/2-theta[cstart[c]+i])
-      y.append(bafall[cstart[c]+i])
-  plt.polar(x,y,color=cc,linewidth=0.3)
-  plt.fill_between(x,y,[1.0 for i in y],color=cc,alpha=0.8)
+    if cc == (0, 0, 1):
+        cc = (0, 1, 0)
+    else:
+        cc = (0, 0, 1)
+    x = []
+    y = []
+    for i in range(cend[c] - cstart[c]):
+        if bafall[cstart[c] + i] > 0:
+            x.append(np.pi / 2 - theta[cstart[c] + i])
+            y.append(1.-bafall[cstart[c] + i])
+    plt.polar(x, y, color=cc, linewidth=0.3)
+    plt.fill_between(x, y, [1.0 for i in y], color=cc, alpha=0.8)
 
-cc=(0.6,0.6,0.6)
+cc = (0.6, 0.6, 0.6)
 for c in chrs:
-  if cc==(0.6,0.6,0.6):
-    cc=(0.3,0.3,0.3)
-  else:
-    cc=(0.6,0.6,0.6)
-  x=[]
-  y=[]
-  for i in range(cend[c]-cstart[c]):
-    if rdall[cstart[c]+i]<(3*ard) and rdall[cstart[c]+i]>(ard/3):
-      x.append(np.pi/2-theta[cstart[c]+i])
-      y.append(rdall[cstart[c]+i]/(3*ard))
-  plt.polar(x,y,color=cc,linewidth=0.3)
-  plt.fill_between(x,[0.1 for i in y],y,color=cc,alpha=0.8)
+    if cc == (0.6, 0.6, 0.6):
+        cc = (0.3, 0.3, 0.3)
+    else:
+        cc = (0.6, 0.6, 0.6)
+    x = []
+    y = []
+    for i in range(cend[c] - cstart[c]):
+        x.append(np.pi / 2 - theta[cstart[c] + i])
+        if rdall[cstart[c] + i] > (3 * mean_rd):
+            y.append(1.)
+        elif rdall[cstart[c] + i] < (mean_rd / 3):
+            y.append(1./9.)
+        else:
+            y.append(rdall[cstart[c] + i] / (3 * mean_rd))
+    plt.polar(x, y, color=cc, linewidth=0.3)
+    plt.fill_between(x, [0.1 for i in y], y, color=cc, alpha=0.8)
 
 for c in chrs:
-  ax.text(np.pi/2-theta[(cstart[c]+cend[c])/2], 0.8, c, fontsize=8)
-
+    ax.text(np.pi / 2 - theta[(cstart[c] + cend[c]) / 2], 0.8, c, fontsize=8)
 
 ax.set_rmax(0.9)
 ax.set_rticks([])
 ax.set_xticks([])
 ax.grid(True)
 
+if args.title:
+  fig.suptitle(args.title, fontsize='large')
+else:
+  fig.suptitle(args.root_file, fontsize='large')
 
 if args.save_file:
-    plt.savefig(args.save_file,dpi=400)
+    plt.savefig(args.save_file, dpi=400)
 else:
     plt.show()
