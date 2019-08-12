@@ -2,7 +2,7 @@
 
 import numpy as np
 import argparse
-from pytools.io import IO
+from pytools import io
 
 parser = argparse.ArgumentParser(description='Plot BAF')
 parser.add_argument("root_file", help="CNVnator root file name")
@@ -24,6 +24,7 @@ args = parser.parse_args()
 
 if args.save_file:
     import matplotlib as mpl
+
     mpl.use('Agg')
     import matplotlib.pyplot as plt
 else:
@@ -33,22 +34,28 @@ bs = args.binsize
 rdbs = args.rdbinsize
 pbs = args.plotbinsize
 
-io = IO(args.root_file)
-chroms = io.get_chrom_names_with_tree()
-chrs = [ "chr"+c if ((not c in chroms) and ("chr"+c in chroms)) else c for c in args.chromosomes.split(",")]
+iof = io.IO(args.root_file)
+snpflag=0
+if not args.nomask:
+    snpflag|=io.FLAG_USEMASK
+if args.useid:
+    snpflag|=io.FLAG_USEID
+print(snpflag)
+chroms = iof.get_chrom_names_with_tree()
+chrs = ["chr" + c if ((not c in chroms) and ("chr" + c in chroms)) else c for c in args.chromosomes.split(",")]
 
 bafall = []
 rdall = []
 cstart = {}
 cend = {}
-Nrd=pbs/rdbs
-N=pbs/bs
+Nrd = pbs / rdbs
+N = pbs / bs
 for c in chrs:
-    snp=io.get_signal(c, bs, "SNP maf")[1]
-    rd=io.get_signal(c, bs, "RD")[1]
+    snp = iof.get_signal(c, bs, "SNP maf",snpflag)[1]
+    rd = iof.get_signal(c, bs, "RD")[1]
     cstart[c] = len(rdall)
-    bafall += [sum(snp[n:n+N])/len(snp[n:n+N]) for n in range(0, len(snp), N)]
-    rdall += [sum(rd[n:n+N]) for n in range(0, len(snp), N)]
+    bafall += [sum(snp[n:n + N]) / len(snp[n:n + N]) for n in range(0, len(snp), N)]
+    rdall += [sum(rd[n:n + N]) for n in range(0, len(snp), N)]
     cend[c] = len(rdall)
 
 mean_rd = sum(rdall) / len(rdall)
@@ -70,7 +77,7 @@ for c in chrs:
     for i in range(cend[c] - cstart[c]):
         if bafall[cstart[c] + i] > 0:
             x.append(np.pi / 2 - theta[cstart[c] + i])
-            y.append(1.-bafall[cstart[c] + i])
+            y.append(1. - bafall[cstart[c] + i])
     plt.polar(x, y, color=cc, linewidth=0.3)
     plt.fill_between(x, y, [1.0 for i in y], color=cc, alpha=0.8)
 
@@ -87,7 +94,7 @@ for c in chrs:
         if rdall[cstart[c] + i] > (3 * mean_rd):
             y.append(1.)
         elif rdall[cstart[c] + i] < (mean_rd / 3):
-            y.append(1./9.)
+            y.append(1. / 9.)
         else:
             y.append(rdall[cstart[c] + i] / (3 * mean_rd))
     plt.polar(x, y, color=cc, linewidth=0.3)
@@ -102,9 +109,9 @@ ax.set_xticks([])
 ax.grid(True)
 
 if args.title:
-  fig.suptitle(args.title, fontsize='large')
+    fig.suptitle(args.title, fontsize='large')
 else:
-  fig.suptitle(args.root_file, fontsize='large')
+    fig.suptitle(args.root_file, fontsize='large')
 
 if args.save_file:
     plt.savefig(args.save_file, dpi=400)

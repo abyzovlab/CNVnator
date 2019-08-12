@@ -112,7 +112,6 @@ class IO:
                     forest.append(name)
         return forest
 
-
     def get_tree(self, chr, signal):
         """ToDo - read tree and return arrays"""
         return True
