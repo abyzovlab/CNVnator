@@ -695,7 +695,7 @@ void HisMaker::generateViewBAF(TString chrom,int start,int end,
   TTree *vcftree = (TTree*)file.Get(sn.str().c_str());
   if (!vcftree) {
         cerr<<"Can't find VCF tree for chromosome '"<<chrom<<"' in file '"
-      <<root_file_name<<"'."<<endl;
+	    <<root_file_name<<"'."<<endl;
         return;
   }
   if(vcftree) drawHistogramsBAF(chrom,start,end,win,title,pad,his,vcftree);
@@ -953,47 +953,50 @@ bool HisMaker::parseInput(TString &input,TString &chrom,
   while (i < input.Length() && input[i] != ' ')
     option   += input[i++];
 
-//   if (!start.IsDigit() || !end.IsDigit()) {
-//     else
-  if (!start.IsDigit()) {
-    TString s = start(0,start.Length() - 1);
-    char    z = start[start.Length() - 1];
+  TString s = "", e = "", o = "";
+  bool ret = true;
+  if (!start.IsDigit() && start.Length() > 1) {
+    s = start(0,start.Length() - 1);
+    char z = start[start.Length() - 1];
     if (s.IsDigit()) {
-      if (z == 'M' || z == 'm') s += "000000";
-      if (z == 'k' || z == 'K') s += "000";
+      if      (z == 'M' || z == 'm') s += "000000";
+      else if (z == 'K' || z == 'k') s += "000";
+      else                           s += z;
     }
-    if (!s.IsDigit()) {
-      cout<<"Invalid start "<<start<<"."<<endl;
-      return false;
-    }
-    start = s;
+  } else s = start;
+  if (!s.IsDigit()) {
+    cout<<"Invalid start '"<<start<<"'."<<endl;
+    ret = false;
   }
+  start = s;
 
-  if (!end.IsDigit()) {
-    TString e = end(0,end.Length() - 1);
-    char    z = end[end.Length() - 1];
+  if (!end.IsDigit() && end.Length() > 1) {
+    e = end(0,end.Length() - 1);
+    char z = end[end.Length() - 1];
     if (e.IsDigit()) {
-      if (z == 'M' || z == 'm') e += "000000";
-      if (z == 'k' || z == 'K') e += "000";
+      if      (z == 'M' || z == 'm') e += "000000";
+      else if (z == 'K' || z == 'k') e += "000";
+      else                           e += z;
     }
-    if (!e.IsDigit()) {
-      cout<<"Invalid end "<<end<<"."<<endl;
-      return false;
-    }
-    end = e;
+  } else e = end;
+  if (!e.IsDigit()) {
+    cout<<"Invalid end '"<<end<<"'."<<endl;
+    ret = false;
   }
+  end = e;
 
-  if (!option.IsDigit()) {
-    TString o = option(0,option.Length() - 1);
-    char    z = option[option.Length() - 1];
+  if (!option.IsDigit() && option.Length() > 1) {
+    o = option(0,option.Length() - 1);
+    char z = option[option.Length() - 1];
     if (o.IsDigit()) {
-      if (z == 'M' || z == 'm') o += "000000";
-      if (z == 'k' || z == 'K') o += "000";
+      if      (z == 'M' || z == 'm') o += "000000";
+      else if (z == 'K' || z == 'k') o += "000";
+      else                           o += z;
       option = o;
     }
   }
 
-  return true;
+  return ret;
 }
 
 void HisMaker::drawHistograms(TString chrom,int start,int end,
@@ -4413,10 +4416,36 @@ int findIndex(string *arr,int n,string name)
   return -1;
 }
 
+void HisMaker::produceTreesFrom1BAM(string *user_chroms,int n_chroms,
+				    string user_file,bool lite)
+{
+  AliParser *parser = new AliParser(user_file);
+  for (int i = 0;i < n_chroms;i++) {
+    string chr = user_chroms[i];
+    cout<<"We have chromosome "<<chr<<endl;
+    if (parser->scrollTo(chr,0) < 0) {
+      cout<<"Can't scroll to chromosome "<<chr<<endl;
+      continue;
+    }
+    cout<<"About to parse "<<endl;
+    while (parser->parseRecord()) {
+      if (parser->isUnmapped())  continue;
+      if (parser->isDuplicate()) continue;
+      if (parser->isSecondary()) continue;
+      cout<<"We parsed "<<parser->getChromosome()<<endl;
+      break;
+    }
+  }
+  delete parser;
+}
+
 void HisMaker::produceTrees(string *user_chroms,int n_chroms,
 			    string *user_files,int n_files,
 			    bool lite)
 {
+//   if (n_files == 1 && AliParser::looksLikeBAM(user_files[0]))
+//     return produceTreesFrom1BAM(user_chroms,n_chroms,user_files[0],lite);
+
   string one_string[1] = {""};
   if (user_chroms == NULL) n_chroms = 0;
   if (user_files  == NULL || n_files == 0) {

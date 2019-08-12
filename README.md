@@ -4,15 +4,17 @@
 
 ```
 # Extract read mapping
-$ ./cnvnator -root file.root -tree file.bam -unique
+$ ./cnvnator -root file.root -tree file.bam
 
 # Generate histogram
-$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y
+$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y -d dir_with_genome_fa/
   OR
-$ ./cnvnator -root file.root -his 1000 -chrom chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY
+$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y -fasta file_genome.fa.gz
+  OR
+$ ./cnvnator -root file.root -his 1000 -chrom chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY -fasta file_genome.fa.gz
 
 # Calculate statistics
-$ ./cnvnator -root file.root -stat 1000 -d dir_with_genome_fa/
+$ ./cnvnator -root file.root -stat 1000 
 
 # Partition
 $ ./cnvnator -root file.root -partition 1000
@@ -139,7 +141,7 @@ is equivalent to
 ```
 
 
-### 2.2 GENERATING A HISTOGRAM
+### 2.2 GENERATING A READ DEPTH HISTOGRAM
 
 ```
 $ ./cnvnator -root file.root [-chrom name1 ...] -his bin_size [-d dir]
@@ -189,9 +191,28 @@ e-val2        -- is from the probability of RD values within the region to be in
 the tails of a gaussian distribution describing frequencies of RD values in bins.  
 e-val3        -- same as e-val1 but for the middle of CNV  
 e-val4        -- same as e-val2 but for the middle of CNV  
-q0            -- fraction of reads mapped with q0 quality  
+q0            -- fraction of reads mapped with q0 quality
 
-### 2.6 MERGING ROOT FILES
+
+### 2.6 REPORTING READ SUPPORT
+
+To find and report read support for deletions and duplications by abnormal read pairs, use the -pe option as below:
+
+```
+./cnvnator -pe file1.bam ... -qual val(20) -over val(0.8) [-f file]
+```
+
+Once prompted, enter a genomic region and the CNV type, e.g.,
+
+```
+>12:11396601-11436500 del
+or
+>chr12:11396601-11436500 del
+```
+
+Please note that the bin size should be equal to a whole number of 100 bases (e.g., 2500, 3700,…)
+
+### 2.7 MERGING ROOT FILES
 
 ```
 ./cnvnator -root out.root [-chrom name1 ...] -merge file1.root ...
@@ -210,7 +231,7 @@ To import variant data from VCF file use following option:
 ```
 
 If chromosome names are not specified, data for all chromosomes from file.vcf.gz will be imported. If 
-you would like to add or remove the "chr" prefix from your chromosome names, use options -addchr or -rmchr respectively. 
+you would like to add or remove the "chr" prefix from your chromosome names, use options `-addchr` or `-rmchr` respectively. 
 It is important that chromosome names in the vcf file and the SAM/BAM file match. 
 
 To mark known SNPs from the SNP database:
@@ -252,16 +273,32 @@ Once prompted enter a genomic region, e.g.,
 >chr12 11396601 11436500
 ```
 
-One can also perform instant genotyping by adding the word 'genotype', e.g.,
+One can also perform instant visualization by adding the word 'view', e.g.,
 
 ```
->12:11396601-11436500 genotype
+>12:11396601-11436500 view
  or
->chr12:11396601-11436500 genotype
+>chr12:11396601-11436500 view
  or
->12 11396601 11436500 genotype
+>12 11396601 11436500 view
  or
->chr12 11396601 11436500 genotype
+>chr12 11396601 11436500 view
+```
+
+### Additional notes
+
+For genotyping of multiple regions one can use input piping, e.g.,
+```
+./cnvnator -root NA12878.root -genotype 100 << EOF
+12:11396601-11436500
+22:20999401-21300400
+exit
+EOF
+```
+
+Another example:
+```
+awk '{ print $2 } END { print "exit" }' calls.cnvnator | ./cnvnator -root NA12878.root -genotype 100
 ```
 
 
@@ -296,22 +333,16 @@ be displayed as well, e.g.,
 >chr12 11396601 11436500 100000
 ```
 
-One can also perform instant visualization by adding the word 'view', e.g.,
+One can also perform instant genotyping by adding the word 'genotype', e.g.,
 
 ```
->12:11396601-11436500 view
+>12:11396601-11436500 genotype
  or
->chr12:11396601-11436500 view
+>chr12:11396601-11436500 genotype
  or
->12 11396601 11436500 view
+>12 11396601 11436500 genotype
  or
->chr12 11396601 11436500 view
-```
-
-To find read support for CNVs/region of interest, use the -pe option as below:
-
-```
-./cnvnator -pe file1.bam ... -qual val(20) -over val(0.8) [-f file]
+>chr12 11396601 11436500 genotype
 ```
 
 ### 4.2 Plotting B-allele frequency (BAF)
@@ -328,14 +359,15 @@ The resulting output plot has two panels. On the uper panel, black line correspo
 signal, green to segmentation, and red to calls. On the bottom panel each dot corresponds to BAF 
 value of the SNPs. Colors represent following:
  
-* black - homozygous (1/1 or in phased case 1|1) SNPs in P-region of the strict mask,
-* grey - homozygous (1/1 or in phased case 1|1) SNPs out of P-region of the strict mask,
-* blue - heterozygous (0/1 or in phased case 0|1) SNPs in P-region of the strict mask,
-* cyan - heterozygous (0/1 or in phased case 0|1) SNPs out of P-region of the strict mask,
-* red - heterozygous (only in phased case 1|0) SNPs in P-region of the strict mask,
-* orange - heterozygous (only in phased case 1|0) SNPs out of P-region of the strict mask.
+* black - homozygous (1/1 or 1|1) SNPs in P-region of the strict mask,
+* grey - homozygous (1/1 or 1|1) SNPs out of P-region of the strict mask,
+* blue - heterozygous (0/1 or 0|1) SNPs in P-region of the strict mask,
+* cyan - heterozygous (0/1 or 0|1) SNPs out of P-region of the strict mask,
+* red - heterozygous (1|0) SNPs in P-region of the strict mask,
+* orange - heterozygous (1|0) SNPs out of P-region of the strict mask.
 
 Plot BAF data with python tool plotbaf.py (requires numpy, matplotlib installed):
+
 ```
 ./plotbaf.py [-h] [-bs BINSIZE] [-res RESOLUTION] [-o SAVE_FILE] [-t TITLE]
              [-nomask] [-useid] root_file region
@@ -359,28 +391,29 @@ Output plot consists of four panels. Starting from the top one, they are:
 * BAF value for heterozygous SNPs.
 * Likelihood function. Light dots on the imagemap represent the most likely value of BAF at each bin.
 * Red line represents a distance between maxima positions in likelihood function that is equivalent
-  to twice the absolute difference between most likely BAF value and 1/2. Blue dots represent the ratio
-  between the value of the likelihood function at 1/2 and its maximum value.
-* Green dots and blue error-bars correspond to mean MAF and corresponding standard deviation per bin,
+  to twice the absolute difference between most likely BAF value and 0.5. Blue dots represent the ratio
+  between the value of the likelihood function at 0.5 and its maximum value.
+* Green dots and blue error-bars correspond to mean MAF and standard deviation per bin,
   respectively. Bin size is 100k base pairs.
 
 
+## 5. Exporting CNV calls as VCFs
 
-### Additional notes
+In order to export your CNV calls as a VCF file, use the script `cnvnator2VCF.pl` as
 
-For genotyping of multiple regions one can use input piping, e.g.,
 ```
-./cnvnator -root NA12878.root -genotype 100 << EOF
-12:11396601-11436500
-22:20999401-21300400
-exit
-EOF
+cnvnator2VCF.pl -prefix study1 -reference GRCh37 sample1.cnvnator.out /path/to/individual/fasta_files
 ```
 
-Another example:
-```
-awk '{ print $2 } END { print "exit" }' calls.cnvnator | ./cnvnator -root NA12878.root -genotype 100
-```
+where, 
+
+-prefix specifies a prefix string you want to append to the ID field in your output VCF. For e.g., if you set your -prefix as "study1", then your resulting ID column will be study1_CNVnator_del_1, study1_CNVnator_del_2 etc.
+
+-reference stands for the name of reference genome you used, for e.g., GRCh37, hg19 etc.
+
+file.calls is your CNVnator output file with the CNV calls
+
+genome_dir is the directory containing your individual reference fasta files such as 1.fa, 2.fa etc. (or chr1.fa, chr2.fa etc.)
 
 
 ## Contact Us

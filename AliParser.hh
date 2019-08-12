@@ -73,6 +73,27 @@ public:
   inline bool isSecondary()    { return flag_ & 0x100; }
   inline bool isDuplicate()    { return flag_ & 0x400; }
 
+public: // File types
+  inline static bool looksLikeSAM(string fname) {
+    return fname[fname.length() - 4] == '.' &&
+      (fname[fname.length() - 3] == 's' || fname[fname.length() - 3] == 'S') &&
+      (fname[fname.length() - 2] == 'a' || fname[fname.length() - 2] == 'A') &&
+      (fname[fname.length() - 1] == 'm' || fname[fname.length() - 1] == 'M');
+  }
+  inline static bool looksLikeBAM(string fname) {
+    return fname[fname.length() - 4] == '.' &&
+      (fname[fname.length() - 3] == 'b' || fname[fname.length() - 3] == 'B') &&
+      (fname[fname.length() - 2] == 'a' || fname[fname.length() - 2] == 'A') &&
+      (fname[fname.length() - 1] == 'm' || fname[fname.length() - 1] == 'M');
+  }
+  inline static bool looksLikeCRAM(string fname) {
+    return fname[fname.length() - 5] == '.' &&
+      (fname[fname.length() - 4] == 'c' || fname[fname.length() - 4] == 'C') &&
+      (fname[fname.length() - 3] == 'r' || fname[fname.length() - 3] == 'R') &&
+      (fname[fname.length() - 2] == 'a' || fname[fname.length() - 2] == 'A') &&
+      (fname[fname.length() - 1] == 'm' || fname[fname.length() - 1] == 'M');
+  }
+
 public:
   inline string getQueryName() { return (record) ? bam1_qname(record) : ""; }
 
