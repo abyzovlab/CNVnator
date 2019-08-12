@@ -1,5 +1,5 @@
 VERSION	       = v0.4
-override LIBS += -lz -lbz2 -lcurl -llzma
+override LIBS += -lz -lbz2 -lcurl -llzma -lreadline -lcrypto
 
 ifneq ($(wildcard $(ROOTSYS)/lib/root),)
         ROOTLIBS = -L$(ROOTSYS)/lib/root -lCore -lRIO -lHist -lGraf -lGpad -lTree -lMathCore
@@ -37,12 +37,14 @@ ifneq ($(YEPPPINCLUDEDIR),)
         INC += -I$(YEPPPINCLUDEDIR) -DUSE_YEPPP
 endif
 
-CXX    = g++ -O3 -std=c++11 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
+CXX    = g++ -O3 -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++11 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
 #CXX    = g++ -O3 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
 
 OBJDIR = obj
 OBJS   = $(OBJDIR)/cnvnator.o  \
 	 $(OBJDIR)/EXOnator.o  \
+	 $(OBJDIR)/IO.o  \
+	 $(OBJDIR)/Visualizer.o  \
 	 $(OBJDIR)/HisMaker.o  \
 	 $(OBJDIR)/AliParser.o \
 	 $(OBJDIR)/FastaParser.o \

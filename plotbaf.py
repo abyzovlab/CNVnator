@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
 import matplotlib.pyplot as plt
 import numpy
 import ROOT
@@ -32,7 +33,7 @@ else:
 
 
 f=ROOT.TFile(args.root_file)
-t=f.Get("vcf_"+chr)
+t=f.Get("snp_"+chr)
 data=[]
 for e in t:
   if e.position>pmin and e.position<pmax:

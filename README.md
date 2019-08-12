@@ -21,6 +21,19 @@ $ ./cnvnator -root file.root -partition 1000
 
 # Call CNVs
 $ ./cnvnator -root file.root -call 1000
+
+# Import SNP data
+$ ./cnvnator -root file.root -vcf file.vcf.gz
+
+# Import mask data
+$ ./cnvnator -root file.root -mask mask.fa.gz
+
+# Generate SNP histograms
+$ ./cnvnator -root file.root -baf 10000
+
+# List root file content
+$ ./cnvnator -root file.root -ls
+
 ```
 
 ## 1. Compilation

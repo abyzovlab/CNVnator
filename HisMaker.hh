@@ -32,6 +32,7 @@ using namespace std;
 // Application includes
 #include "AliParser.hh"
 #include "Genome.hh"
+#include "IO.hh"
 
 // Constants
 const static double PRECISION           = 0.01;
@@ -64,6 +65,7 @@ private:
   Genome *refGenome_;
   string dir_;
   string fastafile;
+  IO io;
 
 public:
   HisMaker(string rootFile,Genome *genome = NULL);
@@ -138,6 +140,13 @@ public:
               string *user_files,int n_files,bool rmchr,bool addchr);
   void MaskVar(string *user_chroms,int n_chroms,
               string *user_files,int n_files,bool rmchr,bool addchr);
+  double beta_pdf(double x, int a, int b);
+  void produceBAF(string *chrom,int n_chroms,bool useGCcorr,
+                  bool useHaplotype,bool useid,bool usemask,int res=201);
+  void producePartitionBAF(string *chrom,int n_chroms,bool useGCcorr,
+                  bool useHaplotype,bool useid,bool usemask,int res=201);
+  void callBAF(string *chrom,int n_chroms,bool useGCcorr,
+                  bool useHaplotype,bool useid,bool usemask);
   void mergeTrees(string *user_chroms,int n_chroms,
 		  string *user_files,int n_files);
   void produceHistograms(string *chrom,int n_chroms,
@@ -158,8 +167,11 @@ public:
   void partition2D(string *user_chroms,int n_chroms,
 		   bool skipMasked,bool useATcorr,bool useGCcorr,
 		   bool exome = false,int range = 128);
+  void partitionSignal(int bin, string signal, unsigned int flags, string *user_chroms,int n_chroms,bool skipMasked,bool exome,int range);
+  void partitionSignal2D(int bin, string signal1, string signal2, unsigned int flags, string *user_chroms,int n_chroms,int range);
   void callSVs(string *user_chroms,int n_chroms,bool useATcorr,bool useGCcorr,
 	       double delta);
+  void callSVsSignal(int bin, string signal, unsigned int flags,string *user_chroms,int n_chroms,double delta);
   void pe(string *bamss,int n_files,double over,double qual);
   void pe_for_file(string file,
 		   string *bams,int n_files,double over,double qual);
@@ -230,7 +242,7 @@ private:
   int getChromLenWithTree(string name,string rfn = "");
 
 public:
-  void getMeanSigma(TH1 *his,double &mean,double &sigma);
+  void getMeanSigma(TH1 *his,double &mean,double &sigma,bool dofit=true);
 };
 
 #endif

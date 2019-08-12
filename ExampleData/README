@@ -1,0 +1,4 @@
+File: 20141020.strict_mask.whole_genome.fasta.gz
+Description:
+One merged file that contains genome strict mask for all chromosomes from 1000 Genomes Project:
+ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/accessible_genome_masks/StrictMask/
