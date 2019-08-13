@@ -166,7 +166,6 @@ char** Visualizer::completer(const char* text, int start, int end) {
 }
 
 char* Visualizer::completion_generator(const char* text, int state) {
-//  std::vector<std::string> vocabulary{"set RD", "set RD raw", "set RD partition", "set RD call", "set SNP", "set SNP likelihood", "set SNP likelihood call", "set SNP count", "show"};
   static std::vector<std::string> matches;
   static size_t match_index = 0;
   if (state == 0) {
@@ -190,7 +189,6 @@ char* Visualizer::completion_generator(const char* text, int state) {
 
 void Visualizer::prompt() {
   TTimer  *timer = new TTimer("gSystem->ProcessEvents();",50,kFALSE);
-//  TString input = "";
   string input="";
   char* buf;
   rl_attempted_completion_function = completer;
@@ -205,17 +203,12 @@ void Visualizer::prompt() {
     input=string(buf);
     if(buf!=nullptr) add_history(buf);
     free(buf);
-//    input = Getline(">");
-//    getline(cin,input);
-//    input.ReplaceAll("\n","\0");
-//    input = input.Remove(TString::kBoth,' ');
     timer->TurnOff();
   }
   delete timer;
 }
 
 void Visualizer::gview() {
-//  int n=io[0]->nChromWithTree();
   int n=chroms.size();
   TCanvas *canvas = new TCanvas("canv","canv",1000,800);
   canvas->SetFillColor(kWhite);
@@ -234,7 +227,6 @@ void Visualizer::generateView(string chrom,int start,int end,TVirtualPad *canvas
   int win = 1*(end - start + 1);
   if (win < 10000) win = 10000;
   
-//  if (canvas) delete canvas;
   TStyle *st = new TStyle("st","st");
   st->SetOptStat(false);  // No box with statistics
   st->SetOptTitle(false); // No box with title
@@ -263,14 +255,6 @@ void Visualizer::generateView(string chrom,int start,int end,TVirtualPad *canvas
     pad->SetFrameLineColor(kWhite);
     pad->SetFrameBorderMode(0);
     drawHistograms(chrom,start,end,win,"RD",pad,raw,his,hisc,hisp,hism);
-//  if (hisc) {
-//    double mean,sigma;
-//    TH1 *rd_his = getHistogram(getDistrName("chr1",bin_size,
-//                                            useATcorr,useGCcorr));
-//    getMeanSigma(rd_his,mean,sigma);
-//    hisc->GetYaxis()->SetRangeUser(0,2*mean);
-//    hisc->SetLineWidth(1);
-//  }
   }
 
   if(panel(2)) {
