@@ -72,6 +72,10 @@ Also, a link to the samtools binary should be present in your CNVnator directory
 
 If compilation is not completed but the file libbam.a has been created, you can continue.
 
+### Installation from release zip file (recommended)
+
+See [INSTALL](INSTALL) for complete details. 
+
 ### Installation from github
 
 ```
