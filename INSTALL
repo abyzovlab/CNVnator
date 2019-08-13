@@ -33,7 +33,11 @@ Unzip and compile:
 or
 
     make         # with parallel suport
-    
+
+or
+
+   make LIBS="-lcrypto"    # if you got compilation time error related to undifined libcrypto reference.
+
 Installing
 ==========
 
