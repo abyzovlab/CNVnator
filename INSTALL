@@ -28,7 +28,7 @@ Unzip and compile:
     cd CNVnator_v0.4.1
     cd src
     ln -s <path_to_samtools_dir> samtools
-    make -OMP=no # without parallel support
+    make OMP=no # without parallel support
 
 or
 
@@ -56,12 +56,14 @@ Running
 * Extract read mapping:
 
     cnvnator -root file.root -tree file.bam
+or
+    cnvnator -root file.root -tree file.bam -chrom $(seq 1 22) X Y
+or
+    cnvnator -root file.root -tree file.bam -chrom $(seq -f "chr%g" 1 22) chrX chrY
 
 * Generate histogram:
 
-    cnvnator -root file.root -his 1000 -fasta reference_genome.fasta.gz -chrom $(seq 1 22) X Y
-or
-    cnvnator -root file.root -his 1000 -fasta reference_genome.fasta.gz -chrom $(seq -f "chr%g" 1 22) chrX chrY
+    cnvnator -root file.root -his 1000 -fasta reference_genome.fasta.gz 
 
 * Calculate statistics
 
