@@ -1,5 +1,9 @@
 VERSION	       = v0.4.1
+<<<<<<< HEAD
 override LIBS += -lz -lbz2 -lcurl -llzma -lreadline -lcrypto
+=======
+override LIBS += -lz -lbz2 -lcurl -llzma -lreadline
+>>>>>>> d49654848ad9203e3eedd8d248a4f5b2d9d5a204
 
 ifneq ($(wildcard $(ROOTSYS)/lib/root),)
         ROOTLIBS = -L$(ROOTSYS)/lib/root -lCore -lRIO -lHist -lGraf -lGpad -lTree -lMathCore
@@ -38,19 +42,18 @@ ifneq ($(YEPPPINCLUDEDIR),)
 endif
 
 CXX    = g++ -O3 -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++11 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
-#CXX    = g++ -O3 -DCNVNATOR_VERSION=\"$(VERSION)\" $(OMPFLAGS)
 
 OBJDIR = obj
-OBJS   = $(OBJDIR)/cnvnator.o  \
-	 $(OBJDIR)/EXOnator.o  \
-	 $(OBJDIR)/IO.o  \
-	 $(OBJDIR)/Visualizer.o  \
-	 $(OBJDIR)/HisMaker.o  \
+OBJS   = $(OBJDIR)/cnvnator.o \
+	 $(OBJDIR)/EXOnator.o \
+	 $(OBJDIR)/IO.o \
+	 $(OBJDIR)/Visualizer.o \
+	 $(OBJDIR)/HisMaker.o \
 	 $(OBJDIR)/AliParser.o \
 	 $(OBJDIR)/FastaParser.o \
 	 $(OBJDIR)/VcfParser.o \
 	 $(OBJDIR)/Genotyper.o \
-	 $(OBJDIR)/Interval.o  \
+	 $(OBJDIR)/Interval.o \
 	 $(OBJDIR)/Genome.o
 
 DISTRIBUTION = $(PWD)/CNVnator_$(VERSION).zip
@@ -74,17 +77,19 @@ clean:
 distribution: clean all
 	@echo Creating directory ...
 	@rm -rf $(MAINDIR)
-	@rm -f  $(DISTRIBUTION)
-	@mkdir  $(MAINDIR)
-	@mkdir  $(SRCDIR)
+	@rm -f $(DISTRIBUTION)
+	@mkdir $(MAINDIR)
+	@mkdir $(SRCDIR)
 	@echo Copying files ...
-	@cp *.hh *.cpp  $(SRCDIR)
-	@cp Makefile    $(SRCDIR)
-	@cp README.md       $(MAINDIR)
+	@cp *.hh *.cpp $(SRCDIR)
+	@cp Makefile $(SRCDIR)
+	@cp README.md $(MAINDIR)
 	@cp ReleaseNotes.md $(MAINDIR)
-	@cp CITATION        $(MAINDIR)
-	@cp license.rtf     $(MAINDIR)
-	@cp cnvnator2VCF.pl plotbaf.py $(MAINDIR)
+	@cp INSTALL $(MAINDIR)
+	@cp CITATION $(MAINDIR)
+	@cp license.rtf $(MAINDIR)
+	@cp -r ExampleData $(MAINDIR)
+	@cp -r pytools cnvnator2VCF.pl plotbaf.py plotrdbaf.py plotcircular.py $(SRCDIR)
 	@echo Zipping ...
 	@ln -s $(MAINDIR)
 	@zip -qr $(DISTRIBUTION) $(CNVDIR)

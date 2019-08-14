@@ -123,8 +123,11 @@ class IO:
         return [his.GetBinCenter(i) for i in range(n)], [his.GetBinContent(i) for i in range(n)]
 
     def get_signal_2d(self, chr, bin_size, signal, flags=FLAG_USEMASK | FLAG_GC_CORR):
-        """ToDo - Returns 2D histogram: (Xbin_centers, Values) """
-        return True
+        """Returns 2D histogram: (Xbin_centers, Values) """
+        his = self.file.Get("bin_" + str(bin_size)).Get(self.signal_name(chr, bin_size, signal, flags))  
+        nx=his.GetXaxis().GetNbins()
+        ny=his.GetYaxis().GetNbins()
+        return [his.GetXaxis().GetBinCenter(i) for i in range(nx)],[his.GetYaxis().GetBinCenter(i) for i in range(ny)],[[his.GetBinContent(i,j) for j in range(ny)] for i in range(nx)]
 
 
 if __name__ == '__main__':

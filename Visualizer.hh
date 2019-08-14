@@ -4,6 +4,8 @@
 #include "IO.hh"
 #include <map>
 #include <vector>
+#include <string>
+
 
 class Visualizer
 {

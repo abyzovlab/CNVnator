@@ -11,7 +11,7 @@ parser.add_argument("region", help="Chromosome or region in format chr:START-END
 parser.add_argument("-bs", "--binsize", type=int,
                     help="size of bins", default=100000)
 parser.add_argument("-rdbs", "--rdbinsize", type=int,
-                    help="size of bins for RD signal", default=10000)
+                    help="size of bins for RD signal", default=100000)
 parser.add_argument("-res", "--resolution", type=int,
                     help="size of bins", default=100)
 parser.add_argument("-o", "--save_file",

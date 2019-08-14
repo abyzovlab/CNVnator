@@ -29,7 +29,6 @@ class IO {
   const static map<string,unsigned int> Flag;
 
   TString rootfile;
-  TFile file;
   vector<string> rd_tree;
   vector<string> snp_tree;
   vector<string> bin_dir;
@@ -39,7 +38,8 @@ class IO {
 public:
   IO(string _rootfile);
   ~IO();
-  
+
+  TFile file;
   // NAMES
   TString treeName(string chr,string signal);
   TString signalName(string chr, int bin, string signal, unsigned int flags);

@@ -3,15 +3,24 @@
 ## Quick start guide
 
 ```
-# Extract read mapping
-$ ./cnvnator -root file.root -tree file.bam
+# Extract read mapping 
+$ ./cnvnator -root file.root -tree file.bam -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16\
+17 18 19 20 21 22 X Y
+  OR
+$ ./cnvnator -root file.root -tree file.bam -chrom $(seq 1 22) X Y
+  OR
+$ ./cnvnator -root file.root -tree file.bam -chrom chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8\
+chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY
+  OR
+$ ./cnvnator -root file.root -tree file.bam -chrom $(seq -f 'chr%g' 1 22) chrX chrY
+  # If option -chrom is not used all chromosomes from bam file will be extracted.
 
 # Generate histogram
-$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y -d dir_with_genome_fa/
+$ ./cnvnator -root file.root -his 1000 -d dir_with_genome_fa/
   OR
-$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y -fasta file_genome.fa.gz
+$ ./cnvnator -root file.root -his 1000 -fasta file_genome.fa.gz
   OR
-$ ./cnvnator -root file.root -his 1000 -chrom chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY -fasta file_genome.fa.gz
+$ ./cnvnator -root file.root -his 1000 -chrom 1 2 3 4 -fasta file_genome.fa.gz
 
 # Calculate statistics
 $ ./cnvnator -root file.root -stat 1000 
@@ -24,15 +33,32 @@ $ ./cnvnator -root file.root -call 1000
 
 # Import SNP data
 $ ./cnvnator -root file.root -vcf file.vcf.gz
+  OR
+$ ./cnvnator -root file.root -vcf file.vcf.gz -addchr
+  # Options -addchr or -rmchr can be used to add or remove the "chr" prefix from 
+  # chromosome names in vcf file to match chromosom names from bam file. 
 
 # Import mask data
 $ ./cnvnator -root file.root -mask mask.fa.gz
-
+  OR
+$ ./cnvnator -root file.root -mask mask.fa.gz -addchr
+  
 # Generate SNP histograms
 $ ./cnvnator -root file.root -baf 10000
 
+# Ploting
+$ ./cnvnator -root file.root -view 10000
+>1:1M-50M
+>1:1M-50M baf
+
 # List root file content
 $ ./cnvnator -root file.root -ls
+
+# Copy RD and SNP data to new root file
+$ ./cnvnator -root file.root -cptrees new_file.root
+
+# Ploting RD and BAF whole genome circular plots using python tool:
+$ ./plotcircular.py file.root
 
 ```
 
@@ -45,6 +71,10 @@ You must install [ROOT package](http://root.cern.ch) and set up `$ROOTSYS` varia
 Also, a link to the samtools binary should be present in your CNVnator directory.
 
 If compilation is not completed but the file libbam.a has been created, you can continue.
+
+### Installation from release zip file (recommended)
+
+See [INSTALL](INSTALL) for complete details. 
 
 ### Installation from github
 
@@ -366,6 +396,7 @@ value of the SNPs. Colors represent following:
 * red - heterozygous (1|0) SNPs in P-region of the strict mask,
 * orange - heterozygous (1|0) SNPs out of P-region of the strict mask.
 
+#### plotbaf.py
 Plot BAF data with python tool plotbaf.py (requires numpy, matplotlib installed):
 
 ```
@@ -373,18 +404,18 @@ Plot BAF data with python tool plotbaf.py (requires numpy, matplotlib installed)
              [-nomask] [-useid] root_file region
 ```
 
-required arguments:
-root\_file: cnvnator root file name
-region: chromosomal coordinates in the format chr:start-end
+Required arguments:
+* root\_file: cnvnator root file name
+* region: chromosomal coordinates in the format chr:start-end
 
 
-optional arguments: 
-size of bins: -bs BINSIZE, --binsize BINSIZE
-likelihood function resolution: -res RESOLUTION, --resolution RESOLUTION
-save plot to file: -o SAVE_FILE, --save_file SAVE_FILE
-plot title: -t TITLE, --title TITLE
-do calculations without mask: -nomask
-do calculations using idvar filter: -useid
+Optional arguments: 
+* size of bins (default 100,000): -bs BINSIZE, --binsize BINSIZE
+* likelihood function resolution (default 100): -res RESOLUTION, --resolution RESOLUTION
+* save plot to file: -o SAVE_FILE, --save_file SAVE_FILE
+* plot title: -t TITLE, --title TITLE
+* do calculations without mask: -nomask
+* do calculations using idvar filter: -useid
 
 Output plot consists of four panels. Starting from the top one, they are:
 
@@ -396,6 +427,66 @@ Output plot consists of four panels. Starting from the top one, they are:
 * Green dots and blue error-bars correspond to mean MAF and standard deviation per bin,
   respectively. Bin size is 100k base pairs.
 
+#### plotrdbaf.py
+
+Plot RD and BAF data with python tool plotrdbaf.py:
+
+```
+./plotrdbaf.py [-h] [-bs BINSIZE] [-rdbs RDBINSIZE] [-res RESOLUTION]
+               [-o SAVE_FILE] [-t TITLE] [-nomask] [-useid]
+               root_file region
+```
+
+Required arguments:
+* root\_file: cnvnator root file name
+* region: chromosomal coordinates in the format chr:start-end
+
+
+Optional arguments: 
+* size of bins (default 100,000): -bs BINSIZE, --binsize BINSIZE
+* size of bins for RD signal (default 100,000): -rdbs RDBINSIZE, --rdbinsize RDBINSIZE
+* likelihood function resolution (default 100): -res RESOLUTION, --resolution RESOLUTION
+* save plot to file: -o SAVE_FILE, --save_file SAVE_FILE
+* plot title: -t TITLE, --title TITLE
+* do calculations without mask: -nomask
+* do calculations using idvar filter: -useid
+
+Output plot consists of four panels. Starting from the top one, they are:
+
+* Read depth (RD) signal.
+* BAF value for heterozygous SNPs.
+* Likelihood function. Light dots on the imagemap represent the most likely value of BAF at each bin.
+* Red line represents a distance between maxima positions in likelihood function that is equivalent
+  to twice the absolute difference between most likely BAF value and 0.5. Blue dots represent the ratio
+  between the value of the likelihood function at 0.5 and its maximum value.
+* Green dots and blue error-bars correspond to mean MAF and standard deviation per bin,
+  respectively. Bin size is 100k base pairs.
+
+#### plotcircular.py
+Plot RD and BAF data with python tool plotcircular.py:
+
+```
+./plotcircular.py [-h] [-chrom CHROMOSOMES] [-bs BINSIZE] [-o SAVE_FILE]
+                       [-t TITLE] [-rdbs RDBINSIZE] [-pbs PLOTBINSIZE]
+                       [-nomask] [-useid]
+                       root_file
+```
+
+Required arguments:
+* root\_file: cnvnator root file name
+
+
+Optional arguments: 
+* comma separated chromosom list: -chrom CHROMOSOMES, --chromosomes CHROMOSOMES
+* plot bin size (default 1,000,000): -pbs PLOTBINSIZE, --plotbinsize PLOTBINSIZE
+* size of bins(default 100,000): -bs BINSIZE, --binsize BINSIZE
+* size of bins for RD signal (default 100,000): -rdbs RDBINSIZE, --rdbinsize RDBINSIZE
+* save plot to file: -o SAVE_FILE, --save_file SAVE_FILE
+* plot title: -t TITLE, --title TITLE
+* do calculations without mask: -nomask
+* do calculations using idvar filter: -useid
+
+Output plot is circular. Inner plot represents RD signal, while outher represents MAF (Minor allele frequency) signal.
 
 ## 5. Exporting CNV calls as VCFs
 
@@ -415,6 +506,37 @@ file.calls is your CNVnator output file with the CNV calls
 
 genome_dir is the directory containing your individual reference fasta files such as 1.fa, 2.fa etc. (or chr1.fa, chr2.fa etc.)
 
+## 6. Python module: Read CNVnator data from root file
+
+Use python module pytools.io to extract CNVnator data from root file.
+
+```
+import pytools.io
+io=pytools.io.IO("file.root")
+positions,rd=x.get_signal("1",100000,"RD")
+positions2,phased_baf=x.get_signal("1",100000,"SNP baf",flag=pytools.io.FLAG_USEHAP|pytools.io.FLAG_USEMASK)
+positions,ybins,likelihood=x.get_signal_2d("1",100000,"SNP likelihood")
+```
+
+
+List of available signals:
+* "RD"
+* "RD unique"
+* "RD raw"
+* "RD partition"
+* "RD call"
+* "GC"
+* "SNP count"
+* "SNP baf"
+* "SNP maf"
+* "SNP likelihood"
+
+List of available flags:
+* RD signal: FLAG_GC_CORR
+* RD signal: FLAG_AT_CORR
+* SNP signal: FLAG_USEMASK
+* SNP signal: FLAG_USEID
+* SNP signal: FLAG_USEHAP
 
 ## Contact Us
 

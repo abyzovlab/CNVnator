@@ -1,6 +1,7 @@
 // C/C++ includes
 #include <iostream>
 #include <fstream>
+#include <string>
 
 #ifdef USE_YEPPP
 #include <yepMath.h>

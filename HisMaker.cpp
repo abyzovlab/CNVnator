@@ -18,7 +18,6 @@
 #endif
 
 static const int N_CHROM_MAX = 20000;
-//static const int N_CHROM_MAX = 50000;
 
 double my_gaus(double *x_arr,double *par)
 {
@@ -127,7 +126,22 @@ HisMaker::~HisMaker()
 
 TH1* HisMaker::getHistogram(TString name,TString alt_name)
 {
-  return getHistogram(root_file_name,dir_name,name,alt_name);
+  io.file.cd();
+  TDirectory *d = NULL;
+  d = (TDirectory*)io.file.Get(dir_name);
+  if (!d) {
+    cerr<<"Can't find directory '"<<dir_name<<"'."<<endl;
+    return NULL;
+  }
+  d->cd();
+  TH1 *his = (TH1*)d->Get(name);
+  if (!his) {
+    his = (TH1*)d->Get(alt_name);
+    if (!his) return NULL;
+  }
+  gROOT->cd();
+  TH1 *ret = (TH1*)his->Clone(his->GetName());
+  return ret;
 }
 
 TH1* HisMaker::getHistogram(TString root_file,TString dir,
@@ -165,17 +179,12 @@ bool HisMaker::writeH(bool useDir,
 		      TH1 *his1,TH1 *his2,TH1 *his3,
 		      TH1 *his4,TH1 *his5,TH1 *his6)
 {
-  TFile file(root_file_name,"Update");
-  if (file.IsZombie()) {
-    cerr<<"Can't open file '"<<root_file_name<<"'."<<endl;
-    return false;
-  }
-
+  io.file.cd();
   if (useDir) {
-    TDirectory *dir = (TDirectory*)file.Get(dir_name);
+    TDirectory *dir = (TDirectory*)io.file.Get(dir_name);
     if (!dir) {
       cout<<"Making directory "<<dir_name<<" ..."<<endl;
-      dir = file.mkdir(dir_name);
+      dir = io.file.mkdir(dir_name);
       dir->Write(dir_name);
     }
     if (!dir) {
@@ -191,9 +200,7 @@ bool HisMaker::writeH(bool useDir,
   if (his4) his4->Write(his4->GetName(),TObject::kOverwrite);
   if (his5) his5->Write(his5->GetName(),TObject::kOverwrite);
   if (his6) his6->Write(his6->GetName(),TObject::kOverwrite);
-  
-  file.Close();
-  
+
   return true;
 }
 
@@ -685,14 +692,10 @@ void HisMaker::generateViewBAF(TString chrom,int start,int end,
   pad->SetFrameLineColor(kWhite);
   pad->SetFrameBorderMode(0);
   title = "BAF";
-  TFile file(root_file_name);
-  if (file.IsZombie()) {
-    cerr<<"Can't open file '"<<root_file_name<<"'."<<endl;
-    return;
-  }
   stringstream sn;
   sn<<"snp_"<<chrom;
-  TTree *vcftree = (TTree*)file.Get(sn.str().c_str());
+  io.file.cd();
+  TTree *vcftree = (TTree*)io.file.Get(sn.str().c_str());
   if (!vcftree) {
         cerr<<"Can't find VCF tree for chromosome '"<<chrom<<"' in file '"
 	    <<root_file_name<<"'."<<endl;
@@ -702,7 +705,6 @@ void HisMaker::generateViewBAF(TString chrom,int start,int end,
 
   delete vcftree;
   
-  file.Close();
   canv_view->cd(0);
   canv_view->Update();
 }
@@ -1322,7 +1324,7 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
       b--;
     }
     
-    writeHistogramsToBinDir(rd_level_merge,merge);
+    io.writeHistogramsToBinDir(bin_size,rd_level_merge,merge);
 
     // Making calls
     for (int b = 0;b < n_bins;b++) {
@@ -1527,7 +1529,7 @@ void HisMaker::callSVsSignal(int bin, string signal, unsigned int flags,string *
       b--;
     }
     
-    writeHistogramsToBinDir(rd_level_merge,merge);
+    io.writeHistogramsToBinDir(bin_size,rd_level_merge,merge);
     
     // Making calls
     for (int b = 0;b < n_bins;b++) {
@@ -1603,15 +1605,10 @@ double HisMaker::getMean(TH1 *his)
 
 int HisMaker::getChromNamesWithHis(string *names,bool useATcorr,bool useGCcorr)
 {
-  TFile file(root_file_name,"Read");
-  if (file.IsZombie()) { 
-    cerr<<"Can't open file '"<<root_file_name<<"'."<<endl;
-    return -1;
-  }
-  TDirectory *dir = (TDirectory*)file.Get(dir_name);
+  io.file.cd();
+  TDirectory *dir = (TDirectory*)io.file.Get(dir_name);
   if (!dir) {
-    cerr<<"Can't find directory '"<<dir_name<<"' in file '"
-	<<root_file_name<<"'.\n"<<endl;
+    cerr<<"Can't find directory '"<<dir_name<<"' in file '" <<root_file_name<<"'.\n"<<endl;
     return -1;
   }
 
@@ -1791,7 +1788,7 @@ void HisMaker::partition2D(string *user_chroms,int n_chroms,
     delete[] mask;
 
     // Chromosome specific
-    writeHistogramsToBinDir(partition,hl1,hl2,hl3);
+    io.writeHistogramsToBinDir(bin_size,partition,hl1,hl2,hl3);
     delete hl1;
     delete hl2;
     delete hl3;
@@ -1799,7 +1796,7 @@ void HisMaker::partition2D(string *user_chroms,int n_chroms,
 
     // General statistics
     // If many chromosomes are analyzed then sum of all will be written last
-    writeHistogramsToBinDir(rd_level,frag_len,dl,dl2);
+    io.writeHistogramsToBinDir(bin_size,rd_level,frag_len,dl,dl2);
   }
 }
 
@@ -1929,7 +1926,7 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
     delete[] mask;
 
     // Chromosome specific
-    writeHistogramsToBinDir(partition,hl1,hl2,hl3);
+    io.writeHistogramsToBinDir(bin_size,partition,hl1,hl2,hl3);
     delete hl1;
     delete hl2;
     delete hl3;
@@ -1937,7 +1934,7 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
 
     // General statistics
     // If many chromosomes are analyzed then sum of all will be written last
-    writeHistogramsToBinDir(rd_level,frag_len,dl,dl2);
+    io.writeHistogramsToBinDir(bin_size,rd_level,frag_len,dl,dl2);
   }
 }
 
@@ -2212,7 +2209,7 @@ void HisMaker::partitionSignal(int bin, string signal, unsigned int flags, strin
     delete[] mask;
     
     // Chromosome specific
-    writeHistogramsToBinDir(partition,hl1,hl2,hl3);
+    io.writeHistogramsToBinDir(bin_size,partition,hl1,hl2,hl3);
     delete hl1;
     delete hl2;
     delete hl3;
@@ -2380,8 +2377,8 @@ void HisMaker::partitionSignal2D(int bin, string signal1, string signal2, unsign
     delete[] isig2;
     delete[] mask;
     
-    writeHistogramsToBinDir(partition1,hl11,hl12,hl13);
-    writeHistogramsToBinDir(partition2,hl21,hl22,hl23);
+    io.writeHistogramsToBinDir(bin_size,partition1,hl11,hl12,hl13);
+    io.writeHistogramsToBinDir(bin_size,partition2,hl21,hl22,hl23);
     delete hl11;
     delete hl12;
     delete hl13;
@@ -2836,14 +2833,8 @@ TTree *HisMaker::fitValley2ATbias(TH1 *his_read,TH1 *his_frg)
 //     timer->TurnOff();
 //     if (input == "exit") return NULL;
   }
-
-  TFile file(root_file_name.Data(),"Update");
-  if (file.IsZombie()) {
-    cerr<<"Can't open/write to file '"<<root_file_name<<"'."<<endl;
-  } else {
-    tree_pars->Write(tree_pars->GetName(),TObject::kOverwrite);
-    file.Close();
-  }
+  
+  tree_pars->Write(tree_pars->GetName(),TObject::kOverwrite);
   return tree_pars;
 }
 
@@ -2952,12 +2943,9 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
 	  cerr<<"Can't find RD histogram for '"<<chrom<<"'."<<endl;
 	  continue;
 	}
-	TFile file(root_file_name,"Read");
-	if (file.IsZombie()) { 
-	  cerr<<"Can't open file '"<<root_file_name<<"'."<<endl;
-	  return;
-	}
-	TTree *tree = (TTree*)file.Get(name_at.c_str());
+  
+	io.file.cd();
+	TTree *tree = (TTree*)io.file.Get(name_at.c_str());
 	if (!tree) {
 	  cerr<<"Can't find AT run tree for '"<<chrom<<"'."<<endl;
 	  continue;
@@ -3019,7 +3007,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
 	    his_p->SetBinContent(b,his_p->GetBinContent(b)/val);
 	}
 	his_p->SetName(getSignalName(name,bin_size,true,false));
-	writeHistogramsToBinDir(his_p);
+	io.writeHistogramsToBinDir(bin_size,his_p);
 	delete[] at_run;
       }
     }
@@ -3096,7 +3084,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
   cout<<"Average RD per bin (X,Y)  is "<<mean<<" +- "<<sigma
       <<" (before GC correction)"<<endl;
 
-  writeHistogramsToBinDir(rd_u,rd_u_xy,rd_p,rd_p_xy,rd_gc,rd_gc_xy);
+  io.writeHistogramsToBinDir(bin_size,rd_u,rd_u_xy,rd_p,rd_p_xy,rd_gc,rd_gc_xy);
 
   // Correcting by GC-content
   for (int c = 0;c < n_chroms;c++) {
@@ -3122,7 +3110,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
 	correctGC(his_p,his_gc,rd_gc,rd_p);
     }
     his_corrected->SetName(new_his_name);
-    writeHistogramsToBinDir(his_corrected);
+    io.writeHistogramsToBinDir(bin_size,his_corrected);
   }
 
   // Statistics for corrected counts
@@ -3177,7 +3165,7 @@ void HisMaker::stat(string *user_chroms,int n_chroms,bool useATcorr)
   cout<<"Average RD per bin (X,Y)  is "<<mean<<" +- "<<sigma
       <<" (after GC correction)"<<endl;
 
-  writeHistogramsToBinDir(rd_p_GC,rd_p_xy_GC,rd_gc_GC,rd_gc_xy_GC);
+  io.writeHistogramsToBinDir(bin_size,rd_p_GC,rd_p_xy_GC,rd_gc_GC,rd_gc_xy_GC);
 }
 
 void HisMaker::eval(string *files,int n_files,bool useATcorr,bool useGCcorr)
@@ -3272,16 +3260,11 @@ void HisMaker::produceHistogramsNew(string *user_chroms,int user_n_chroms)
     return;
   }
 
-  TFile file(root_file_name,"Read");
-  if (file.IsZombie()) { 
-    cerr<<"Can't open file '"<<root_file_name<<"'."<<endl;
-    return;
-  }
-
   string chr_names[N_CHROM_MAX] = {""};
   int    chrom_lens[N_CHROM_MAX];
   int ncs = 0;
-  TIterator *it = file.GetListOfKeys()->MakeIterator();
+  io.file.cd();
+  TIterator *it = io.file.GetListOfKeys()->MakeIterator();
   while (TKey *key = (TKey*)it->Next()) {
     TObject *obj = key->ReadObj();
     if (obj->IsA() != TTree::Class()) {
@@ -3317,7 +3300,6 @@ void HisMaker::produceHistogramsNew(string *user_chroms,int user_n_chroms)
     } else cerr<<"Too many trees in the file '"<<root_file_name<<"'."<<endl
 	       <<"Tree '"<<name<<"' is ignored."<<endl;
   }
-  file.Close();
 
   if (user_n_chroms == 0 || (user_n_chroms == 1 && user_chroms[0] == "")) {
     user_chroms   = chr_names;
@@ -3439,7 +3421,7 @@ void HisMaker::produceHistogramsNew(string *user_chroms,int user_n_chroms)
       val += arr[i];
     }
     if (bin <= bin_size) his_signal->SetBinContent(bin,val);
-    writeHistogramsToBinDir(his_signal);
+    io.writeHistogramsToBinDir(bin_size,his_signal);
 
     delete[] uarr;
     delete[] rarr;
@@ -3577,7 +3559,7 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
     }
 
     // Writing chromosome specific histograms
-    writeHistogramsToBinDir(his_rd_u,his_rd_p);
+    io.writeHistogramsToBinDir(bin_size,his_rd_u,his_rd_p);
     
     // Creating histograms with GC-content
     cout<<"Making GC histogram for '"<<chrom<<"' ..."<<endl;
@@ -3594,7 +3576,7 @@ void HisMaker::produceHistograms(string *user_chroms,int n_chroms,
 	if (up > org_len) up = org_len;
 	his_gc->SetBinContent(i,countGCpercentage(seq_buffer,low,up));
       }
-      writeHistogramsToBinDir(his_gc);
+      io.writeHistogramsToBinDir(bin_size,his_gc);
     }
     cout<<"Done."<<endl;
 
@@ -3728,7 +3710,7 @@ void HisMaker::produceHistogramsFa(string *user_chroms,int n_chroms,
     }
 
     // Writing chromosome specific histograms
-    writeHistogramsToBinDir(his_rd_u,his_rd_p);
+    io.writeHistogramsToBinDir(bin_size,his_rd_u,his_rd_p);
     
     // Creating histograms with GC-content
     cout<<"Making GC histogram for '"<<chrom<<"' ..."<<endl;
@@ -3746,7 +3728,7 @@ void HisMaker::produceHistogramsFa(string *user_chroms,int n_chroms,
   if (up > org_len) up = org_len;
   his_gc->SetBinContent(i,countGCpercentage(cseq.c_str(),low,up));
       }
-      writeHistogramsToBinDir(his_gc);
+      io.writeHistogramsToBinDir(bin_size,his_gc);
     }
     cout<<"Done."<<endl;
 
@@ -3943,7 +3925,7 @@ void HisMaker::produceHistograms_try_correct(string *user_chroms,int n_chroms)
 //     if (atn > 0) delete[] at_run;
 
     // Writing chromosome specific histograms
-    writeHistogramsToBinDir(his_rd_u_raw,his_rd_p_raw,his_rd_p,his_gc);
+    io.writeHistogramsToBinDir(bin_size,his_rd_u_raw,his_rd_p_raw,his_rd_p,his_gc);
     delete his_rd_u_raw;
     delete his_rd_p_raw;
     delete his_rd_p;
@@ -4047,11 +4029,11 @@ void HisMaker::produceHistograms_try_correct(string *user_chroms,int n_chroms)
       bstart += bin_size;
       bend   += bin_size;
     }
-    writeHistogramsToBinDir(his_rd_p);
+    io.writeHistogramsToBinDir(bin_size,his_rd_p);
   }
 
   // Writing global histograms
-  writeHistogramsToBinDir(his_at,his_test);
+  io.writeHistogramsToBinDir(bin_size,his_at,his_test);
   delete his_at;
   delete his_test;
 
@@ -4807,11 +4789,6 @@ void HisMaker::writeTreeForVcf(string chr,std::vector<int> &vcf_position,std::ve
 
   cout<<"Filling and saving tree for '"<< chr <<"' ..."<<endl;
   
-  TFile file(root_file_name.Data(),"Update");
-  if (file.IsZombie()) {
-    cerr<<"Can't open/write to file '"<<root_file_name<<"'."<<endl;
-    return;
-  }
   stringstream sd,sn;
   sn<<"snp_"<<chr;
   sd<<"snp_"<<chr<<';'<<vcf_position.size();
@@ -4841,7 +4818,6 @@ void HisMaker::writeTreeForVcf(string chr,std::vector<int> &vcf_position,std::ve
   }
   tree->Write(sn.str().c_str(),TObject::kOverwrite);
   delete tree;
-  file.Close();
   cout<<"Saving tree with '"<< vcf_position.size() <<"' SNPs."<<endl;
 }
 
@@ -4912,11 +4888,7 @@ void HisMaker::IdVar(string *user_chroms,int n_chroms,string *user_files,int n_f
 void HisMaker::updateTreeIdVar(string chr,std::vector<int> &vcf_position, std::map<int,char> &vcf_refm, std::map<int,char> &vcf_altm)
 {
   cout<<"Updating tree for '"<<chr<<"' ..."<<endl;
-  TFile file(root_file_name.Data(),"Update");
-  if (file.IsZombie()) {
-    cerr<<"Can't open/write to file '"<<root_file_name<<"'."<<endl;
-    return;
-  }
+
   stringstream sd,sn;
   sn<<"snp_"<<chr;
   sd<<"snp_"<<chr<<';'<<vcf_position.size();
@@ -4925,8 +4897,9 @@ void HisMaker::updateTreeIdVar(string chr,std::vector<int> &vcf_position, std::m
   int _position;
   char _ref[2]="",_alt[2]="";
   short _qual,_nref,_nalt,_gt,_flag;
-  if(file.GetListOfKeys()->Contains(sn.str().c_str())) {
-    TTree *oldtree = (TTree*) file.Get(sn.str().c_str());
+  io.file.cd();
+  if(io.file.GetListOfKeys()->Contains(sn.str().c_str())) {
+    TTree *oldtree = (TTree*) io.file.Get(sn.str().c_str());
     cout << "Found tree in root file." << endl;
     
     TTree *tree = new TTree(sn.str().c_str(),sd.str().c_str());
@@ -4964,12 +4937,12 @@ void HisMaker::updateTreeIdVar(string chr,std::vector<int> &vcf_position, std::m
     }
     
     // Writing the tree
+    io.file.cd();
     tree->Write(sn.str().c_str(),TObject::kOverwrite);
     
     // Deleting the tree
     delete tree;
   }
-  file.Close();
   cout<<"Saving tree with marked "<< npass <<" SNPs out of " << ne << " found in VCF file."<<endl;
 }
 
@@ -5003,19 +4976,15 @@ void HisMaker::MaskVar(string *user_chroms,int n_chroms,string *user_files,int n
 
       cout<<"Updating tree for '"<<name<<"' chromosome..."<<endl;
 
-      TFile file(root_file_name.Data(),"Update");
-      if (file.IsZombie()) {
-        cerr<<"Can't open/write to file '"<<root_file_name<<"'."<<endl;
-        return;
-      }
       stringstream sd,sn;
       sn<<"snp_"<<name;
       
       int _position;
       char _ref[2]="",_alt[2]="";
       short _qual,_nref,_nalt,_gt,_flag;
-      if(file.GetListOfKeys()->Contains(sn.str().c_str())) {
-        TTree *oldtree = (TTree*) file.Get(sn.str().c_str());
+      io.file.cd();
+      if(io.file.GetListOfKeys()->Contains(sn.str().c_str())) {
+        TTree *oldtree = (TTree*) io.file.Get(sn.str().c_str());
         cout << "Found tree in root file." << endl;
 
         TTree *tree = new TTree(sn.str().c_str(),sn.str().c_str());
@@ -5046,16 +5015,14 @@ void HisMaker::MaskVar(string *user_chroms,int n_chroms,string *user_files,int n
           tree->Fill();
         }
         
-      // Writing the tree
-      tree->Write(sn.str().c_str(),TObject::kOverwrite);
+        // Writing the tree
+        io.file.cd();
+        tree->Write(sn.str().c_str(),TObject::kOverwrite);
       
-      // Deleting the tree
-      delete tree;
+        // Deleting the tree
+        delete tree;
       }
-      file.Close();
-      //***
-
-  }
+    }
   }
 }
 
@@ -5665,12 +5632,6 @@ void HisMaker::producePartitionBAF(string *user_chroms,int n_chroms,bool useGCco
 void HisMaker::writeTreeForChromosome(string chrom,short *arr_p,
 				      short *arr_u,int len)
 {
-  // Creating a tree
-  TFile file(root_file_name.Data(),"Update");
-  if (file.IsZombie()) {
-    cerr<<"Can't open/write to file '"<<root_file_name<<"'."<<endl;
-    return;
-  }
   stringstream ss; ss<<chrom<<';'<<len;
   string description = ss.str();
 
@@ -5691,13 +5652,10 @@ void HisMaker::writeTreeForChromosome(string chrom,short *arr_p,
       tree->Fill();
     }
   }
-    
   // Writing the tree
   tree->Write(chrom.c_str(),TObject::kOverwrite);
-    
   // Deleting the tree
   delete tree;
-  file.Close();
 }
   
 bool HisMaker::readTreeForChromosome(TString fileName,string chrom,
@@ -5734,12 +5692,6 @@ bool HisMaker::readTreeForChromosome(TString fileName,string chrom,
 
 void HisMaker::writeATTreeForChromosome(string chrom,int *arr,int n)
 {
-  // Creating a tree
-  TFile file(root_file_name.Data(),"Update");
-  if (file.IsZombie()) {
-    cerr<<"Can't open/write to file '"<<root_file_name<<"'."<<endl;
-    return;
-  }
   string description = chrom; description += " AT runs";
   string name        = chrom; name        += "_at";
 
@@ -5757,10 +5709,8 @@ void HisMaker::writeATTreeForChromosome(string chrom,int *arr,int n)
     
   // Writing the tree
   tree->Write(tree->GetName(),TObject::kOverwrite);
-    
   // Deleting the tree
   delete tree;
-  file.Close();
 }
 
 TString HisMaker::getDirName(int bin)

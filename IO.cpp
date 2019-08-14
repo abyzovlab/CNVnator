@@ -31,7 +31,7 @@ const vector<string> IO::Signal = vector<string>({
 // Distribution use same signal name + " dist"
 
 
-IO::IO(string _rootfile) : rootfile(_rootfile),file(rootfile,"Read") {
+IO::IO(string _rootfile) : rootfile(_rootfile),file(rootfile,"Update") {
   if (file.IsZombie()) {
     cerr<<"Can't open file '"<<rootfile<<"'."<<endl;
     return;
@@ -364,12 +364,13 @@ TH2* IO::newSignalTH2(string title,string chr, int bin, string signal, unsigned 
 }
 
 bool IO::writeHistogramsToBinDir(int bin,TH1 *his1,TH1 *his2,TH1 *his3,TH1 *his4,TH1 *his5,TH1 *his6) {
-  TFile file(rootfile,"Update");
-  if(file.IsZombie()) {
-    cerr << "Can't open file '" << rootfile << "'." <<endl;
-    return false;
-  }
+  //TFile file(rootfile,"Update");
+  //if(file.IsZombie()) {
+  //  cerr << "Can't open file '" << rootfile << "'." <<endl;
+  //  return false;
+  //}
   if(bin>0) {
+    file.cd();
     TString dir_name=getDirName(bin);
     TDirectory *dir = (TDirectory*)file.Get(dir_name);
     if (!dir) {
@@ -389,7 +390,7 @@ bool IO::writeHistogramsToBinDir(int bin,TH1 *his1,TH1 *his2,TH1 *his3,TH1 *his4
   if (his4) his4->Write(his4->GetName(),TObject::kOverwrite);
   if (his5) his5->Write(his5->GetName(),TObject::kOverwrite);
   if (his6) his6->Write(his6->GetName(),TObject::kOverwrite);
-  file.Close();
+  //file.Close();
   return true;
 }
 
