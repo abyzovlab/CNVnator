@@ -1,9 +1,6 @@
 VERSION	       = v0.4.1
-<<<<<<< HEAD
-override LIBS += -lz -lbz2 -lcurl -llzma -lreadline -lcrypto
-=======
+
 override LIBS += -lz -lbz2 -lcurl -llzma -lreadline
->>>>>>> d49654848ad9203e3eedd8d248a4f5b2d9d5a204
 
 ifneq ($(wildcard $(ROOTSYS)/lib/root),)
         ROOTLIBS = -L$(ROOTSYS)/lib/root -lCore -lRIO -lHist -lGraf -lGpad -lTree -lMathCore
