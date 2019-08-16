@@ -9,12 +9,18 @@ Building CNVnator requires at least the following:
     C compiler (e.g. gcc or clang)
     CERN ROOT (https://root.cern.ch)
     samtools with HTSlib
+    GNU readline library
 
 You must install ROOT package and set up $ROOTSYS variable (see ROOT documentation 
 https://root.cern.ch/root/html534/guides/users-guide/GettingStarted.html).
 
 Download last samtools release https://github.com/samtools/samtools/releases and
 compile samtools and HTSlib.
+
+GNU readline library is required. You can install it using following commands:
+    yum install readline-devel         # RPM-based systems
+    apt-get install libreadline5-dev   # Debian-based systems
+or follow instructions: https://tiswww.case.edu/php/chet/readline/rltop.html
 
 Building
 ========
