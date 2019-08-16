@@ -19,7 +19,7 @@ compile samtools and HTSlib.
 
 GNU readline library is required. You can install it using following commands:
     yum install readline-devel         # RPM-based systems
-    apt-get install libreadline5-dev   # Debian-based systems
+    apt-get install libreadline-dev   # Debian-based systems
 or follow instructions: https://tiswww.case.edu/php/chet/readline/rltop.html
 
 Building
