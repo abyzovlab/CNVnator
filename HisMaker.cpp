@@ -4699,6 +4699,196 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
   cout<<"Total of "<<n_placed<<" reads were placed."<<endl;
 }
 
+void HisMaker::produceTreesLong(string *user_chroms,int n_chroms,
+                                string *user_files,int n_files,
+                                bool lite)
+{
+  string one_string[1] = {""};
+  if (user_chroms == NULL) n_chroms = 0;
+  if (user_files  == NULL || n_files == 0) {
+    n_files    = 1;
+    user_files = one_string;
+  }
+  
+  string cnames[N_CHROM_MAX];
+  int    clens[N_CHROM_MAX],reindex[N_CHROM_MAX],ncs = 0,atlens[N_CHROM_MAX];
+  short *counts_u[N_CHROM_MAX],*counts_p[N_CHROM_MAX];
+  int   *at_se[N_CHROM_MAX];
+  for (int i = 0;i < N_CHROM_MAX;i++) {
+    counts_u[i] = counts_p[i] = NULL;
+    at_se[i] = NULL;
+    atlens[i] = -1;
+  }
+  THashTable unknown;
+  
+  static const int WIN = 2000;
+  TH2 *his_at_aggr  = new TH2I("his_at_aggr","AT aggregation",51,9.5,60.5,
+                               2*WIN + 1,-WIN - 0.5,WIN + 0.5);
+  TH2* his_frg_read = new TH2I("read_frg_len","Read and fragment lengths",
+                               300,0.5,300.5,3001,-0.5,3000.5);
+  int win = WIN/2;
+  TH3* his_pair_pos = new TH3I("pair_pos","Pair position relative to AT run",
+                               51,9.5,60.5,
+                               2*win + 1,-win - 0.5,win + 0.5,
+                               2*win + 1,-win - 0.5,win + 0.5);
+  
+  long n_placed = 0;
+  long n_placed_bp = 0;
+  int ati = 0;
+  for (int f = 0;f < n_files;f++) {
+    
+    if (user_files[f].length() > 0)
+      cout<<"Parsing file "<<user_files[f]<<" ..."<<endl;
+    else
+      cout<<"Parsing stdin ..."<<endl;
+    
+    AliParser *parser = new AliParser(user_files[f].c_str());
+    bool use_ref = false;
+    if (parser->numChrom() == 0) {
+      use_ref = true;
+      cout<<"No chromosome/contig description given."<<endl;
+      if (!refGenome_) {
+        cerr<<"No reference genome specified. Aborting parsing."<<endl;
+        continue;
+      }
+      cout<<"Using "<<refGenome_->name()<<" as reference genome."<<endl;
+      for (int c = 0;c < refGenome_->numChrom();c++) reindex[c] = -1;
+      for (int c = 0;c < refGenome_->numChrom();c++) {
+        string name = refGenome_->chromName(c);
+        if (n_chroms > 0 && findIndex(user_chroms,n_chroms,name) < 0) {
+          //cout<<"NOT considering chromosome/contig '"<<name<<"'."<<endl;
+          continue;
+        }
+        int index = findIndex(cnames,ncs,name);
+        if (index < 0) {
+          index = ncs++;
+          cnames[index] = name;
+          clens[index]  = refGenome_->chromLen(c);
+        }
+        if (clens[index] != refGenome_->chromLen(c))
+          cerr<<"Different lengths for '"<<name<<"' "
+          <<"("<<clens[index]<<", "<<refGenome_->chromLen(c)<<")."<<endl
+          <<"Using the previous length "<<clens[index]<<endl;
+        reindex[c] = index;
+      }
+    } else {
+      for (int c = 0;c < parser->numChrom();c++) reindex[c] = -1;
+      for (int c = 0;c < parser->numChrom();c++) {
+        string name = parser->chromName(c);
+        if (n_chroms > 0 && findIndex(user_chroms,n_chroms,name) < 0) {
+          //cout<<"NOT considering chromosome/contig '"<<name<<"'."<<endl;
+          continue;
+        }
+        int index = findIndex(cnames,ncs,name);
+        if (index < 0) {
+          index = ncs++;
+          cnames[index] = name;
+          clens[index]  = parser->chromLen(c);
+        }
+        if (clens[index] != parser->chromLen(c))
+          cerr<<"Different lengths for '"<<name<<"' "
+          <<"("<<clens[index]<<", "<<parser->chromLen(c)<<")."<<endl
+          <<"Using the previous length "<<clens[index]<<endl;
+        reindex[c] = index;
+      }
+    }
+    
+    cout<<"Allocating memory ..."<<endl;
+    for (int c = 0;c < ncs;c++) {
+      if (!counts_p[c]) {
+        counts_p[c] = new short[clens[c] + 1];
+        memset(counts_p[c],0,(clens[c] + 1)*sizeof(short));
+      }
+      if (!counts_u[c]) {
+        counts_u[c] = new short[clens[c] + 1];
+        memset(counts_u[c],0,(clens[c] + 1)*sizeof(short));
+      }
+    }
+    cout<<"Done."<<endl;
+    
+    int    prev_chr_ind = -1,chr_ind;
+    string prev_chr("");
+    while (parser->parseRecord()) {
+      if (parser->isUnmapped())  continue;
+      if (parser->isDuplicate()) continue;
+      if (parser->isSecondary()) continue;
+      
+      if (use_ref) { // Using reference genome
+        string chr = parser->getChromosome();
+        if (chr == prev_chr) chr_ind = prev_chr_ind;
+        else {
+          chr_ind      = refGenome_->getChromosomeIndex(chr);
+          prev_chr     = chr;
+          if (chr_ind < 0 && !unknown.FindObject(chr.c_str())) {
+            cerr<<"Unknown chromosome/contig '"<<chr<<"' for genome "
+            <<refGenome_->name()<<"."<<endl;
+            unknown.Add(new TNamed(chr.c_str(),""));
+          }
+        }
+      } else chr_ind = parser->getChromosomeIndex(); // bam/sam
+      
+      if (chr_ind < 0) continue;
+      chr_ind = reindex[chr_ind];
+      if (chr_ind < 0 || chr_ind >= ncs) continue;
+      int mid = abs(parser->getStart() + parser->getEnd())>>1;
+      if (mid < 0 || mid > clens[chr_ind]) {
+        cerr<<"Out of bound coordinate "<<mid<<" for '"
+        <<parser->getChromosome()<<"'."<<endl;
+        continue;
+      }
+      
+      // Doing counting
+      for(int pos=parser->getStart();pos<=parser->getEnd();pos++) {
+        if (counts_p[chr_ind][pos] + 1 > 0) counts_p[chr_ind][pos]++;
+        if (!parser->isQ0())
+          if (counts_u[chr_ind][pos] + 1 > 0) counts_u[chr_ind][pos]++;
+        n_placed_bp++;
+      }
+      n_placed++;
+      
+      int frg_len = parser->getFragmentLength();
+      if (frg_len < 0) his_frg_read->Fill(parser->getReadLength(),-frg_len);
+      else             his_frg_read->Fill(parser->getReadLength(), frg_len);
+      
+      prev_chr_ind = chr_ind;
+    }
+    delete parser;
+  }
+  
+  for (int c = 0;c < ncs;c++)
+    if (counts_p[c]) {
+      cout<<"Filling and saving tree for '"<<cnames[c]<<"' ..."<<endl;
+      short *arru = NULL, *arrp = NULL;
+      if (counts_p[c]) arrp = &counts_p[c][1];
+      if (counts_u[c]) arru = &counts_u[c][1];
+      
+      if (lite) // Aggregating by 100 consequites positions
+        for (int pos = 1;pos < clens[c];pos += 100) {
+          int i = pos + 1;
+          while (i < clens[c] && i < pos + 100) {
+            arrp[pos] += arrp[i];
+            arru[pos] += arru[i];
+            arrp[i]    = arru[i] = 0;
+            i++;
+          }
+        }
+      
+      writeTreeForChromosome(cnames[c],arrp,arru,clens[c]);
+    }
+  
+  cout<<"Writing histograms ... "<<endl;
+  writeHistograms(his_frg_read,his_at_aggr,his_pair_pos);
+  
+  for (int c = 0;c < ncs;c++) {
+    delete[] counts_u[c];
+    delete[] counts_p[c];
+    delete[] at_se[c];
+  }
+  
+  cout<<"Total of "<<n_placed<<" reads were placed with total "<< n_placed_bp << " base pairs." <<endl;
+}
+
+
 void HisMaker::addVcf(string *user_chroms,int n_chroms,string *user_files,int n_files,bool rmchr,bool addchr)
 {
   string one_string[1] = {""};

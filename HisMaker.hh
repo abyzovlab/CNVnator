@@ -136,7 +136,9 @@ public:
   void produceTrees(string *user_chroms,int n_chroms,
 		    string *user_files,int n_files,
 		    bool lite);
-  void produceTreesFrom1BAM(string *user_chroms,int n_chroms,
+  void produceTreesLong(string *user_chroms,int n_chroms,
+        string *user_files,int n_files,
+        bool lite);  void produceTreesFrom1BAM(string *user_chroms,int n_chroms,
 			    string  user_files,bool lite);
   void addVcf(string *user_chroms,int n_chroms,
               string *user_files,int n_files,bool rmchr,bool addchr);

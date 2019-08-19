@@ -114,6 +114,7 @@ int main(int argc,char *argv[])
   for (int i = 0;i < n_opts;i++) bins[i] = 0;
   bool useGCcorr = true,useATcorr = false;
   bool lite = false,relaxCalling = false;
+  bool longreads = false;
   string out_root_file(""),call_file(""),group_name(""),fastafile("");
   string chroms[1000],data_files[100000],root_files[100000] = {""},dir = ".";
   int n_chroms = 0,n_files = 0,n_root_files = 0,range = 128, qual = 20;
@@ -267,6 +268,8 @@ int main(int argc,char *argv[])
       call_file = argv[index++];
     } else if (option == "-lite") {
       lite = true;
+    } else if (option == "-longreads") {
+      longreads = true;
     } else if (option == "-rmchr") {
       rmchr=true;
     } else if (option == "-addchr") {
@@ -319,7 +322,8 @@ int main(int argc,char *argv[])
     if (option == OPT_TREE) { // tree
       HisMaker maker(out_root_file,genome);
       maker.setDataDir(dir);
-      maker.produceTrees(chroms,n_chroms,data_files,n_files,lite);
+      if(longreads) maker.produceTreesLong(chroms,n_chroms,data_files,n_files,lite);
+      else maker.produceTrees(chroms,n_chroms,data_files,n_files,lite);
     }
     if (option == OPT_VCF) { // vcf
       HisMaker maker(out_root_file,genome);
