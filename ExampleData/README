@@ -1,4 +1,9 @@
-File: 20141020.strict_mask.whole_genome.fasta.gz
+File: 1KG.20141020.strict_mask.hg19_GRCh37.fa.gz
 Description:
-One merged file that contains genome strict mask for all chromosomes from 1000 Genomes Project:
+One merged file that contains genome hg19 strict mask for all chromosomes from 1000 Genomes Project:
 ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/accessible_genome_masks/StrictMask/
+
+File: 1KG.20160622.strict_mask.hg38_GRCh38.fa.gz
+Description:
+One merged file that contains genome hg38 strict mask for all chromosomes from 1000 Genomes Project:
+http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/working/20160622_genome_mask_GRCh38/
