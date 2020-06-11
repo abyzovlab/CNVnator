@@ -16,7 +16,7 @@ endif
 
 SAMDIR = samtools
 SAMLIB = $(SAMDIR)/libbam.a
-HTSDIR = $(wildcard $(SAMDIR)/htslib-*)
+HTSDIR = $(wildcard $(SAMDIR)/htslib*)
 HTSDIRI = $(HTSDIR)/htslib
 ifneq ($(HTSDIR),)
         SAMLIB += $(HTSDIR)/libhts.a
