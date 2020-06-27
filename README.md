@@ -68,7 +68,7 @@ $ ./plotcircular.py file.root
 
 You must install [ROOT package](http://root.cern.ch) and set up `$ROOTSYS` variable (see ROOT documentation [here](https://root.cern.ch/root/html534/guides/users-guide/GettingStarted.html)).
 
-Also, a link to the samtools binary should be present in your CNVnator directory.
+Also, a link to the samtools binary should be present in your CNVnator directory together with compiled `libhts.a` HTSlib library in a `htslib*` subdirectory.
 
 If compilation is not completed but the file libbam.a has been created, you can continue.
 
