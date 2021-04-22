@@ -1,5 +1,6 @@
 #include "IO.hh"
 #include <algorithm>
+#include <set>
 
 const vector<string> IO::Signal = vector<string>({
   "RD",
