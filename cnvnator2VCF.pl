@@ -113,11 +113,9 @@ while (my $line = <FILE>) {
 	} elsif ($isDel && $rd >= 0.25) {
 	    $GT .= "0/1:1";
 	} elsif ($isDup && $rd <= 1.75) {
-	    $GT .= "0/1:2";
-	} elsif ($isDup && $rd > 1.75 && $rd <= 2.25) {
-	    $GT .= "1/1:2";
-	} elsif ($isDup && $rd > 2.25) {
-	    my $cn = sprintf("%.0f",$rd);
+	    $GT .= "0/1:3";
+	} elsif ($isDup && $rd > 1.75) {
+	    my $cn = sprintf("%.0f",2 * $rd);
 	    $GT.="./1:$cn"; # w/o other data, we can't really say if this is
 	                    # a hom dup, or het dup with higher copy number.
 	} else {
