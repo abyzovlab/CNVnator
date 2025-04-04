@@ -17,7 +17,7 @@
 #include <yepLibrary.h>
 #endif
 
-static const int N_CHROM_MAX = 20000;
+static const int N_CHROM_MAX = 100000;
 
 double my_gaus(double *x_arr,double *par)
 {
